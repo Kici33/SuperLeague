@@ -52,7 +52,7 @@ pub async fn get_challenges_summary() -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn get_champion_masteries() -> Result<Value, String> {
-    lcu_get("/lol-champion-mastery/v1/championship-mastery/top?count=200").await
+    lcu_get("/lol-champion-mastery/v1/local-player/champion-mastery/top?count=200").await
 }
 
 #[tauri::command]

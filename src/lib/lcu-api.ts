@@ -35,9 +35,13 @@ export async function getCurrentSummoner(): Promise<Summoner | null> {
 
 // ── Challenges ──
 
-export async function getChallenges(): Promise<Challenge[]> {
+export async function getChallenges(): Promise<any[]> {
   try {
-    return await invoke('get_challenges');
+    const raw = await invoke('get_challenges');
+    // LCU returns an object keyed by challenge ID, not an array
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') return Object.values(raw);
+    return [];
   } catch {
     return [];
   }
@@ -53,9 +57,12 @@ export async function getChallengesSummary(): Promise<Record<string, number>> {
 
 // ── Champion Mastery ──
 
-export async function getChampionMasteries(): Promise<ChampionMastery[]> {
+export async function getChampionMasteries(): Promise<any[]> {
   try {
-    return await invoke('get_champion_masteries');
+    const raw = await invoke('get_champion_masteries');
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') return Object.values(raw);
+    return [];
   } catch {
     return [];
   }
@@ -81,9 +88,12 @@ export async function getLobbyMembers(): Promise<LobbyMember[]> {
 
 // ── Eternals ──
 
-export async function getEternals(): Promise<EternalSet[]> {
+export async function getEternals(): Promise<any[]> {
   try {
-    return await invoke('get_eternals');
+    const raw = await invoke('get_eternals');
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') return Object.values(raw);
+    return [];
   } catch {
     return [];
   }
@@ -91,9 +101,12 @@ export async function getEternals(): Promise<EternalSet[]> {
 
 // ── Skins ──
 
-export async function getOwnedSkins(): Promise<SkinInfo[]> {
+export async function getOwnedSkins(): Promise<any[]> {
   try {
-    return await invoke('get_owned_skins');
+    const raw = await invoke('get_owned_skins');
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') return Object.values(raw);
+    return [];
   } catch {
     return [];
   }

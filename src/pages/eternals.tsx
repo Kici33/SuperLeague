@@ -8,7 +8,9 @@ export default function Eternals() {
 
   useEffect(() => {
     getEternals().then((data) => {
-      if (Array.isArray(data)) setEternals(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setEternals(data);
+      }
       setLoading(false);
     });
   }, []);
@@ -28,39 +30,50 @@ export default function Eternals() {
       ) : eternals.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-ink-ghost">
           <Star size={40} className="mb-3 opacity-20" />
-          <p className="text-sm text-ink-dim">No eternals data</p>
-          <p className="text-xs mt-1">Connect to League client to see eternals</p>
+          <p className="text-sm text-ink-dim">No eternals data available</p>
+          <p className="text-xs mt-1">Eternals data will appear when available from the League client</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {eternals.map((set: any, i: number) => (
-            <div key={i} className="card p-4">
-              <h3 className="text-sm font-semibold text-ink-bright mb-3">
-                {set.name ?? `Eternal Set ${set.seriesNumber ?? i + 1}`}
-              </h3>
-              <div className="space-y-2.5">
-                {(set.statstones ?? []).map((st: any, j: number) => (
-                  <div key={j} className="flex items-center gap-3">
+          {eternals.map((set: any, i: number) => {
+            const statstones = set.statstones ?? set.sets ?? set.milestones ?? [];
+            const displayStones = Array.isArray(statstones) ? statstones : Object.values(statstones);
+            return (
+              <div key={i} className="card p-4">
+                <div className="flex items-center gap-2.5 mb-3">
+                  {set.championId && (
                     <img
-                      src={getChampionIconUrl(st.championId ?? 0)}
+                      src={getChampionIconUrl(set.championId)}
                       alt=""
-                      className="w-7 h-7 rounded object-cover flex-shrink-0"
+                      className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
                       onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-ink truncate">{st.name}</span>
-                        <span className="text-xs text-gold tabular-nums flex-shrink-0">
-                          {st.formattedValue ?? st.value}
-                        </span>
+                  )}
+                  <h3 className="text-sm font-semibold text-ink-bright">
+                    {set.name ?? set.seriesName ?? `Eternal Set ${i + 1}`}
+                  </h3>
+                </div>
+                <div className="space-y-2.5">
+                  {displayStones.map((st: any, j: number) => (
+                    <div key={j} className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-ink truncate">{st.name ?? st.description ?? `Stat ${j + 1}`}</span>
+                          <span className="text-xs text-gold tabular-nums flex-shrink-0">
+                            {st.formattedValue ?? st.value ?? '—'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-ink-ghost">Milestone {st.milestoneLevel ?? st.milestone ?? 0}</span>
                       </div>
-                      <span className="text-[10px] text-ink-ghost">Milestone {st.milestoneLevel ?? 0}</span>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                  {displayStones.length === 0 && (
+                    <p className="text-xs text-ink-ghost">No stats for this set</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

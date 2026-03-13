@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Search, ChevronDown, Shield, Wrench, Zap, BookOpen } from 'lucide-react';
+import { Search, ChevronDown, Wrench, Zap, Shield } from 'lucide-react';
 import { getAllChampions, getChampionBuilds, getChampionIconUrl, getItemIconUrl } from '@/lib/lcu-api';
 
 const ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const;
@@ -19,12 +19,17 @@ export default function Builds() {
   // Fetch champion list
   useEffect(() => {
     getAllChampions().then((data) => {
+      let list: any[] = [];
       if (Array.isArray(data)) {
-        const sorted = data.sort((a: any, b: any) =>
-          (a.name ?? '').localeCompare(b.name ?? '')
-        );
-        setAllChamps(sorted);
+        list = data;
+      } else if (data && typeof data === 'object') {
+        list = Object.values(data);
       }
+      // Sort and set
+      list = list
+        .filter((c: any) => c && (c.name || c.alias || c.id))
+        .sort((a: any, b: any) => (a.name ?? a.alias ?? '').localeCompare(b.name ?? b.alias ?? ''));
+      setAllChamps(list);
     });
   }, []);
 
@@ -40,35 +45,36 @@ export default function Builds() {
   }, [selectedChamp]);
 
   const filteredChamps = useMemo(() => {
-    if (!search) return allChamps.slice(0, 40);
-    return allChamps.filter((c: any) =>
-      (c.name ?? '').toLowerCase().includes(search.toLowerCase())
-    ).slice(0, 40);
+    if (!search) return allChamps.slice(0, 60);
+    return allChamps.filter((c: any) => {
+      const name = (c.name ?? c.alias ?? '').toLowerCase();
+      return name.includes(search.toLowerCase());
+    }).slice(0, 60);
   }, [allChamps, search]);
 
-  // Extract items from build data (generic handling for LCU format)
+  // Extract items from build data
   const items = useMemo(() => {
     if (!buildData) return { starting: [], core: [], situational: [] };
-    if (Array.isArray(buildData)) {
-      // LCU returns array of build sets
-      const roleBuild = buildData.find((b: any) =>
-        (b.title ?? '').toLowerCase().includes(selectedRole.toLowerCase())
-      ) ?? buildData[0];
-      if (!roleBuild?.blocks) return { starting: [], core: [], situational: [] };
-      const blocks = roleBuild.blocks;
-      return {
-        starting: blocks[0]?.items?.map((i: any) => i.id ?? i.itemId) ?? [],
-        core: blocks[1]?.items?.map((i: any) => i.id ?? i.itemId) ?? [],
-        situational: blocks.slice(2).flatMap((b: any) => b.items?.map((i: any) => i.id ?? i.itemId) ?? []),
-      };
-    }
-    return { starting: [], core: [], situational: [] };
+    const builds = Array.isArray(buildData) ? buildData : (typeof buildData === 'object' ? Object.values(buildData) : []) as any[];
+    if (builds.length === 0) return { starting: [], core: [], situational: [] };
+
+    const roleBuild = builds.find((b: any) =>
+      (b.title ?? '').toLowerCase().includes(selectedRole.toLowerCase())
+    ) ?? builds[0];
+
+    if (!roleBuild?.blocks) return { starting: [], core: [], situational: [] };
+    const blocks = roleBuild.blocks as any[];
+    return {
+      starting: blocks[0]?.items?.map((i: any) => i.id ?? i.itemId) ?? [],
+      core: blocks[1]?.items?.map((i: any) => i.id ?? i.itemId) ?? [],
+      situational: blocks.slice(2).flatMap((b: any) => b.items?.map((i: any) => i.id ?? i.itemId) ?? []),
+    };
   }, [buildData, selectedRole]);
 
   return (
     <div className="p-6 space-y-5 animate-slide-up">
       {/* Champion selector + Role tabs */}
-      <div className="flex gap-3 items-start">
+      <div className="flex gap-3 items-center flex-wrap">
         {/* Champion picker */}
         <div className="relative">
           <button
@@ -78,7 +84,7 @@ export default function Builds() {
             {selectedChamp ? (
               <>
                 <img src={getChampionIconUrl(selectedChamp.id)} alt="" className="w-5 h-5 rounded-full" />
-                <span className="text-ink-bright">{selectedChamp.name}</span>
+                <span className="text-ink-bright">{selectedChamp.name ?? selectedChamp.alias}</span>
               </>
             ) : (
               <span className="text-ink-muted">Select Champion</span>
@@ -108,13 +114,16 @@ export default function Builds() {
                   >
                     <img
                       src={getChampionIconUrl(c.id)}
-                      alt={c.name}
+                      alt={c.name ?? c.alias}
                       className="w-9 h-9 rounded-lg border border-white/[0.06] object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
                     />
-                    <span className="text-[9px] text-ink-ghost truncate w-full text-center">{c.name}</span>
+                    <span className="text-[9px] text-ink-ghost truncate w-full text-center">{c.name ?? c.alias}</span>
                   </button>
                 ))}
+                {filteredChamps.length === 0 && (
+                  <p className="col-span-5 text-center text-xs text-ink-ghost py-4">No champions found</p>
+                )}
               </div>
             </div>
           )}
@@ -136,6 +145,10 @@ export default function Builds() {
             </button>
           ))}
         </div>
+
+        {allChamps.length > 0 && (
+          <span className="text-xs text-ink-ghost ml-auto">{allChamps.length} champions</span>
+        )}
       </div>
 
       {/* Empty state */}
@@ -158,7 +171,7 @@ export default function Builds() {
               className="w-12 h-12 rounded-lg border border-gold/30 object-cover"
             />
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-ink-bright">{selectedChamp.name}</h2>
+              <h2 className="text-base font-semibold text-ink-bright">{selectedChamp.name ?? selectedChamp.alias}</h2>
               <p className="text-xs text-ink-muted">{selectedRole} · Recommended Build</p>
             </div>
           </div>
@@ -194,40 +207,37 @@ export default function Builds() {
             <>
               {buildTab === 'Items' && (
                 <div className="space-y-3">
-                  {/* Starting */}
-                  <div className="card p-4">
-                    <h3 className="text-xs font-semibold text-ink-dim uppercase tracking-wider mb-3">Starting Items</h3>
-                    <div className="flex gap-2">
-                      {(items.starting.length > 0 ? items.starting : [0, 0, 0]).map((id: number, i: number) => (
-                        <div key={i} className="w-12 h-12 rounded border border-white/[0.08] bg-dark overflow-hidden">
-                          {id > 0 && (
+                  {items.starting.length > 0 && (
+                    <div className="card p-4">
+                      <h3 className="text-xs font-semibold text-ink-dim uppercase tracking-wider mb-3">Starting Items</h3>
+                      <div className="flex gap-2 flex-wrap">
+                        {items.starting.map((id: number, i: number) => (
+                          <div key={i} className="w-12 h-12 rounded border border-white/[0.08] bg-dark overflow-hidden">
                             <img src={getItemIconUrl(id)} alt="" className="w-full h-full object-cover"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Core */}
-                  <div className="card p-4">
-                    <h3 className="text-xs font-semibold text-ink-dim uppercase tracking-wider mb-3">Core Build</h3>
-                    <div className="flex gap-2">
-                      {(items.core.length > 0 ? items.core : [0, 0, 0]).map((id: number, i: number) => (
-                        <div key={i} className="flex flex-col items-center gap-1">
-                          <div className="w-14 h-14 rounded-lg border-2 border-gold/20 bg-dark overflow-hidden">
-                            {id > 0 && (
+                  {items.core.length > 0 && (
+                    <div className="card p-4">
+                      <h3 className="text-xs font-semibold text-ink-dim uppercase tracking-wider mb-3">Core Build</h3>
+                      <div className="flex gap-2 flex-wrap">
+                        {items.core.map((id: number, i: number) => (
+                          <div key={i} className="flex flex-col items-center gap-1">
+                            <div className="w-14 h-14 rounded-lg border-2 border-gold/20 bg-dark overflow-hidden">
                               <img src={getItemIconUrl(id)} alt="" className="w-full h-full object-cover"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                            )}
+                            </div>
+                            <span className="text-[10px] text-ink-ghost">Slot {i + 1}</span>
                           </div>
-                          <span className="text-[10px] text-ink-ghost">Slot {i + 1}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Situational */}
                   {items.situational.length > 0 && (
                     <div className="card p-4">
                       <h3 className="text-xs font-semibold text-ink-dim uppercase tracking-wider mb-3">Situational</h3>
@@ -244,8 +254,8 @@ export default function Builds() {
 
                   {items.starting.length === 0 && items.core.length === 0 && (
                     <div className="card p-6 text-center text-ink-ghost">
-                      <p className="text-sm text-ink-dim">No build data available for this champion/role</p>
-                      <p className="text-xs mt-1">Try selecting a different role</p>
+                      <p className="text-sm text-ink-dim">No build data for this combination</p>
+                      <p className="text-xs mt-1">Try a different role</p>
                     </div>
                   )}
                 </div>
@@ -255,7 +265,7 @@ export default function Builds() {
                 <div className="card p-6 text-center text-ink-ghost">
                   <Shield size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm text-ink-dim">Rune data from LCU builds</p>
-                  <p className="text-xs mt-1">Available when connected to League client with a champion selected</p>
+                  <p className="text-xs mt-1">Available when a champion has recommended rune pages</p>
                 </div>
               )}
 
@@ -263,7 +273,7 @@ export default function Builds() {
                 <div className="card p-6 text-center text-ink-ghost">
                   <Zap size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm text-ink-dim">Ability order data</p>
-                  <p className="text-xs mt-1">Available when connected to League client</p>
+                  <p className="text-xs mt-1">Available when a champion has recommended ability order</p>
                 </div>
               )}
             </>

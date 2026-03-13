@@ -63,7 +63,7 @@ export default function Profile() {
               <img
                 src={getProfileIconUrl(parsedIconId)}
                 alt="Profile Icon"
-                className="w-16 h-16 rounded-lg border border-gold/30 object-cover"
+                className="w-12 h-12 rounded-lg border border-gold/30 object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = getProfileIconUrl(29);
                 }}
@@ -81,7 +81,7 @@ export default function Profile() {
                 type="text"
                 value={iconId}
                 onChange={(e) => setIconId(e.target.value.replace(/\s/g, ''))}
-                className="input w-28 text-sm"
+                className="input w-24 text-sm"
                 placeholder="1"
               />
             </div>

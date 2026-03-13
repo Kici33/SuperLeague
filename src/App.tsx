@@ -102,11 +102,12 @@ export default function App() {
           {/* Summoner info */}
           {connected && summoner && (
             <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03]">
-              <div
-                className="w-7 h-7 rounded-full bg-raised flex items-center justify-center text-[11px] font-bold text-gold flex-shrink-0 border border-gold/20"
-              >
-                {summoner.displayName?.charAt(0) ?? '?'}
-              </div>
+              <img
+                src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${summoner.profileIconId ?? 29}.jpg`}
+                alt=""
+                className="w-8 h-8 rounded-full object-cover border border-gold/20 flex-shrink-0"
+                onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+              />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-ink-bright truncate">{summoner.displayName}</p>
                 <p className="text-[10px] text-ink-ghost">Lvl {summoner.summonerLevel}</p>
