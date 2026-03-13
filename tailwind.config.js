@@ -2,109 +2,107 @@ import tailwindcssAnimate from 'tailwindcss-animate';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
-      colors: {
-        // League of Legends Dark Theme Palette
-        league: {
-          // Backgrounds
-          'bg-darkest': '#010A13',
-          'bg-dark': '#0A1428',
-          'bg-medium': '#0A0E14',
-          
-          // Surfaces / Cards
-          'surface': '#1E2328',
-          'surface-light': '#1E282D',
-          'surface-hover': '#252C32',
-          
-          // Primary Gold
-          'gold': '#C89B3C',
-          'gold-light': '#F0E6D2',
-          'gold-dark': '#785A28',
-          'gold-muted': '#463714',
-          
-          // Hextech Blue / Accent
-          'blue': '#0AC8B9',
-          'blue-dark': '#0397AB',
-          'blue-muted': '#0A323C',
-          
-          // Text
-          'text-primary': '#F0E6D2',
-          'text-secondary': '#A09B8C',
-          'text-muted': '#5B5A56',
-          
-          // Borders
-          'border': '#785A28',
-          'border-dark': '#463714',
-          'border-subtle': '#1E282D',
-          
-          // Status Colors
-          'success': '#0ACE81',
-          'danger': '#E84057',
-          'warning': '#F0B232',
-          'info': '#0AC8B9',
-          
-          // Rank Colors
-          'iron': '#6B6B6B',
-          'bronze': '#8C5A3C',
-          'silver': '#9AA4AF',
-          'platinum': '#4E9996',
-          'emerald': '#0ACE81',
-          'diamond': '#576BCE',
-          'master': '#9D48E0',
-          'grandmaster': '#E84057',
-          'challenger': '#F4C874',
-        },
-      },
       fontFamily: {
-        'display': ['Beaufort for LOL', 'serif'],
-        'body': ['Spiegel', 'Inter', 'sans-serif'],
-        'sans': ['Inter', 'Spiegel', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
+      colors: {
+        // Deep background layers
+        void:    '#06090F',
+        abyss:   '#080C14',
+        dark:    '#0D1221',
+        surface: '#111827',
+        raised:  '#161D2C',
+        overlay: '#1C2438',
+        muted:   '#232B3E',
+
+        // Gold palette
+        gold: {
+          dim:    '#5C4A1E',
+          DEFAULT:'#C89B3C',
+          bright: '#D4AA50',
+          light:  '#E8C96A',
+          glow:   '#F0E6D2',
+        },
+
+        // Hextech blue
+        hextech: {
+          dim:    '#0A3040',
+          DEFAULT:'#0BC4E3',
+          bright: '#00D4FF',
+          glow:   '#B0F0FF',
+        },
+
+        // Text
+        ink: {
+          ghost:   '#3A4560',
+          muted:   '#5A688A',
+          dim:     '#8892AA',
+          DEFAULT: '#C8D0E0',
+          bright:  '#E8ECF4',
+          white:   '#F4F6FA',
+        },
+
+        // Status
+        emerald: '#10D48A',
+        ruby:    '#E84057',
+        amber:   '#F0B232',
+      },
+
       borderRadius: {
-        'league': '4px',
+        sm:  '6px',
+        DEFAULT: '8px',
+        md:  '10px',
+        lg:  '14px',
+        xl:  '18px',
+        '2xl': '24px',
       },
+
       boxShadow: {
-        'league': '0 0 10px rgba(200, 155, 60, 0.15)',
-        'league-hover': '0 0 20px rgba(200, 155, 60, 0.25)',
-        'league-glow': '0 0 15px rgba(10, 200, 185, 0.3)',
+        'inner-dark': 'inset 0 1px 0 rgba(255,255,255,0.04)',
+        'gold-sm':    '0 0 12px rgba(200,155,60,0.15)',
+        'gold':       '0 0 24px rgba(200,155,60,0.2), 0 0 48px rgba(200,155,60,0.08)',
+        'gold-lg':    '0 0 40px rgba(200,155,60,0.3), 0 8px 32px rgba(0,0,0,0.4)',
+        'hextech':    '0 0 24px rgba(11,196,227,0.2)',
+        'card':       '0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)',
+        'card-hover': '0 4px 16px rgba(0,0,0,0.5), 0 12px 40px rgba(0,0,0,0.3)',
+        'float':      '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
+        'glow-emerald':'0 0 16px rgba(16,212,138,0.25)',
+        'glow-ruby':  '0 0 16px rgba(232,64,87,0.25)',
       },
+
       backgroundImage: {
-        'league-gradient': 'linear-gradient(180deg, #0A1428 0%, #010A13 100%)',
-        'gold-gradient': 'linear-gradient(180deg, #C89B3C 0%, #785A28 100%)',
-        'blue-gradient': 'linear-gradient(180deg, #0AC8B9 0%, #0397AB 100%)',
+        'gold-gradient':    'linear-gradient(135deg, #785A28, #C89B3C, #E8C96A)',
+        'gold-subtle':      'linear-gradient(135deg, rgba(120,90,40,0.15), rgba(200,155,60,0.08))',
+        'hextech-gradient': 'linear-gradient(135deg, #0A3040, #0BC4E3)',
+        'dark-gradient':    'linear-gradient(180deg, #111827 0%, #0D1221 100%)',
+        'surface-gradient': 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+        'card-gradient':    'linear-gradient(145deg, #171F32 0%, #111827 100%)',
+        'glow-gold':        'radial-gradient(circle at 50% 0%, rgba(200,155,60,0.12) 0%, transparent 70%)',
       },
+
       animation: {
-        'pulse-gold': 'pulseGold 2s ease-in-out infinite',
-        'glow': 'glow 2s ease-in-out infinite alternate',
-        'slide-in': 'slideIn 0.3s ease-out',
-        'fade-in': 'fadeIn 0.2s ease-out',
+        'fade-in':     'fadeIn 0.2s ease-out',
+        'slide-up':    'slideUp 0.25s cubic-bezier(0.16,1,0.3,1)',
+        'slide-in':    'slideIn 0.3s cubic-bezier(0.16,1,0.3,1)',
+        'scale-in':    'scaleIn 0.2s cubic-bezier(0.16,1,0.3,1)',
+        'pulse-gold':  'pulseGold 2s ease-in-out infinite',
+        'shimmer':     'shimmer 1.8s ease-in-out infinite',
       },
+
       keyframes: {
-        pulseGold: {
-          '0%, 100%': { boxShadow: '0 0 5px rgba(200, 155, 60, 0.2)' },
-          '50%': { boxShadow: '0 0 20px rgba(200, 155, 60, 0.4)' },
-        },
-        glow: {
-          '0%': { boxShadow: '0 0 5px rgba(10, 200, 185, 0.2)' },
-          '100%': { boxShadow: '0 0 20px rgba(10, 200, 185, 0.4)' },
-        },
-        slideIn: {
-          '0%': { transform: 'translateX(-10px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
+        fadeIn:    { from: { opacity: '0' }, to: { opacity: '1' } },
+        slideUp:   { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        slideIn:   { from: { opacity: '0', transform: 'translateX(-8px)' }, to: { opacity: '1', transform: 'translateX(0)' } },
+        scaleIn:   { from: { opacity: '0', transform: 'scale(0.95)' }, to: { opacity: '1', transform: 'scale(1)' } },
+        pulseGold: { '0%,100%': { boxShadow: '0 0 8px rgba(200,155,60,0.2)' }, '50%': { boxShadow: '0 0 20px rgba(200,155,60,0.4)' } },
+        shimmer:   { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
       },
     },
   },
-  plugins: [
-    tailwindcssAnimate,
-  ],
-}
+  plugins: [tailwindcssAnimate],
+};

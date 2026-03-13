@@ -1,195 +1,150 @@
-import { useEffect, useState, useRef } from 'react';
-import { Users, Search, RefreshCw, Crown, Shield, Info } from 'lucide-react';
-import { getLobbyMembers } from '@/lib/lcu-api';
+import { useEffect, useState } from 'react';
+import { Users, Search, Crown, Shield } from 'lucide-react';
+import { getLobbyMembers, getChampionIconUrl, getProfileIconUrl } from '@/lib/lcu-api';
 import type { LobbyMember } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
-// Hover card with summoner info
-function MemberHoverCard({ member }: { member: LobbyMember }) {
-  return (
-    <div className="league-hover-card w-64 z-50 pointer-events-none">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-league-bg-darkest border border-league-gold/30 flex items-center justify-center text-sm font-bold text-league-gold">
-          {member.summonerName.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <p className="font-semibold text-league-gold-light">{member.summonerName}</p>
-          {member.isLeader && (
-            <span className="text-xs text-league-gold flex items-center gap-1">
-              <Crown size={10} /> Lobby Leader
-            </span>
-          )}
-        </div>
-      </div>
+const MOCK: LobbyMember[] = [
+  { summonerId: '1', summonerName: 'ArcaneWolf',   profileIconId: 29, summonerLevel: 142, isLeader: true,  challenges: { title: 'Void Walker', tier: 'GOLD', totalPoints: 14_500, rankPoints: 3_200, pointsToNextRank: 800 } },
+  { summonerId: '2', summonerName: 'NightOwl',     profileIconId: 29, summonerLevel: 87,  isLeader: false, challenges: { title: 'Rift Herald', tier: 'SILVER', totalPoints: 7_800, rankPoints: 1_900, pointsToNextRank: 2_100 } },
+  { summonerId: '3', summonerName: 'DragonLancer', profileIconId: 29, summonerLevel: 210, isLeader: false, challenges: { title: 'Challenger', tier: 'PLATINUM', totalPoints: 28_000, rankPoints: 5_600, pointsToNextRank: 400 } },
+  { summonerId: '4', summonerName: 'IronGuard',    profileIconId: 29, summonerLevel: 55,  isLeader: false, challenges: { title: 'Beginner', tier: 'IRON', totalPoints: 2_100, rankPoints: 400, pointsToNextRank: 600 } },
+];
 
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-league-bg-dark rounded p-2">
-          <p className="text-league-text-muted mb-0.5">Challenges</p>
-          <p className="text-league-blue font-semibold">Loading…</p>
-        </div>
-        <div className="bg-league-bg-dark rounded p-2">
-          <p className="text-league-text-muted mb-0.5">Points</p>
-          <p className="text-league-gold font-semibold">— / —</p>
-        </div>
-      </div>
+const TIER_COLOR: Record<string, string> = {
+  IRON: '#9AA4AF', BRONZE: '#CD7F32', SILVER: '#C0C8D4', GOLD: '#C89B3C',
+  PLATINUM: '#4E9996', DIAMOND: '#576BCE', MASTER: '#9D48E0', CHALLENGER: '#F0B232',
+};
 
-      <div className="mt-2 pt-2 border-t border-league-border-dark text-xs text-league-text-muted flex items-center gap-1">
-        <Info size={10} />
-        Full data loads when connected
-      </div>
-    </div>
-  );
-}
-
-interface MemberCardProps {
-  member: LobbyMember;
-}
-
-function MemberCard({ member }: MemberCardProps) {
-  const [showHover, setShowHover] = useState(false);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = () => {
-    hoverTimer.current = setTimeout(() => setShowHover(true), 400);
-  };
-  const handleMouseLeave = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowHover(false);
-  };
+function MemberCard({ member, isYou }: { member: LobbyMember; isYou?: boolean }) {
+  const tierColor = TIER_COLOR[member.challenges?.tier ?? 'IRON'] ?? '#9AA4AF';
+  const pts = member.challenges;
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className={cn(
-        'league-card flex items-center gap-3 cursor-default transition-all duration-200',
-        member.isLocalMember && 'border-league-gold/30 bg-league-gold-muted/20',
-      )}>
-        {/* Avatar */}
-        <div className="
-          w-11 h-11 rounded-full bg-league-bg-darkest border-2 border-league-border-dark
-          flex items-center justify-center text-league-text-secondary font-bold text-base
-          flex-shrink-0
-        ">
-          {member.summonerName.charAt(0).toUpperCase()}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-semibold text-league-text-primary truncate">
-              {member.summonerName}
-            </p>
-            {member.isLeader && <Crown size={12} className="text-league-gold flex-shrink-0" />}
-            {member.isLocalMember && (
-              <span className="text-[10px] bg-league-gold/10 border border-league-gold/20 text-league-gold px-1.5 rounded-full">
-                You
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-league-text-muted">Hover for details</p>
-        </div>
-
-        {/* Team badge */}
-        {member.teamId !== undefined && member.teamId > 0 && (
-          <div className={cn(
-            'px-2 py-0.5 rounded-full text-xs font-medium',
-            member.teamId === 1 ? 'bg-league-blue/10 text-league-blue border border-league-blue/20' : 'bg-league-danger/10 text-league-danger border border-league-danger/20'
-          )}>
-            Team {member.teamId}
+    <div className={`card p-4 flex items-start gap-4 ${isYou ? 'card-gold' : ''}`}>
+      {/* Avatar */}
+      <div className="relative flex-shrink-0">
+        <img
+          src={getProfileIconUrl(member.profileIconId)}
+          alt={member.summonerName}
+          className="w-12 h-12 rounded-lg object-cover border border-white/[0.08]"
+          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.4'; }}
+        />
+        {member.isLeader && (
+          <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gold rounded-full flex items-center justify-center">
+            <Crown size={10} className="text-void" />
           </div>
         )}
       </div>
 
-      {/* Hover overlay */}
-      {showHover && (
-        <div className="absolute left-full top-0 ml-2 z-50 animate-fade-in">
-          <MemberHoverCard member={member} />
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-ink-bright truncate">{member.summonerName}</p>
+          {isYou && <span className="badge-gold text-[9px]">You</span>}
+          {member.isLeader && <span className="badge-muted text-[9px]">Leader</span>}
         </div>
-      )}
+
+        <p className="text-xs text-ink-muted mt-0.5">Level {member.summonerLevel}</p>
+
+        {pts && (
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium" style={{ color: tierColor }}>{pts.tier}</span>
+              <span className="text-ink-ghost tabular-nums">
+                {pts.rankPoints.toLocaleString()} / {(pts.rankPoints + pts.pointsToNextRank).toLocaleString()}
+              </span>
+            </div>
+            <div className="progress-track h-1">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${(pts.rankPoints / (pts.rankPoints + pts.pointsToNextRank)) * 100}%`,
+                  background: `linear-gradient(90deg, ${tierColor}55, ${tierColor})`,
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-ink-ghost">
+              {pts.title} · {pts.totalPoints.toLocaleString()} total pts
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function Lobby() {
-  const [members, setMembers] = useState<LobbyMember[]>([]);
+  const [members, setMembers] = useState<LobbyMember[]>(MOCK);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchLobby = async () => {
-    setRefreshing(true);
-    const data = await getLobbyMembers();
-    setMembers(data);
-    setLoading(false);
-    setRefreshing(false);
-  };
+  useEffect(() => {
+    getLobbyMembers().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setMembers(data);
+      setLoading(false);
+    });
+  }, []);
 
-  useEffect(() => { fetchLobby(); }, []);
-
-  const filtered = members.filter(m =>
+  const filtered = members.filter((m) =>
     m.summonerName.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="p-6 h-full overflow-y-auto space-y-4 animate-fade-in">
-      {/* Header */}
+    <div className="p-6 space-y-5 animate-slide-up">
+      {/* Header row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="text-league-gold" size={24} />
-          <div>
-            <h1 className="text-xl font-bold text-league-gold-light">Lobby Tracker</h1>
-            <p className="text-xs text-league-text-secondary">
-              {members.length > 0 ? `${members.length} player${members.length !== 1 ? 's' : ''} in lobby` : 'No active lobby'}
-            </p>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {!loading && members.length > 0 ? (
+              <span className="status-dot online" />
+            ) : (
+              <span className="status-dot offline" />
+            )}
+            <span className="text-sm text-ink-dim">
+              {members.length} player{members.length !== 1 ? 's' : ''} in lobby
+            </span>
           </div>
         </div>
-        <button onClick={fetchLobby} className="btn-ghost flex items-center gap-2 text-sm">
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
-      </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-league-text-muted" size={14} />
-        <input
-          type="text"
-          placeholder="Search players…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="league-search"
-        />
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-league-text-muted">
-        <span className="flex items-center gap-1"><Crown size={12} className="text-league-gold" /> Leader</span>
-        <span className="flex items-center gap-1"><Shield size={12} className="text-league-blue" /> Hover player for challenge/rank info</span>
-      </div>
-
-      {/* Members List */}
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 bg-league-surface rounded-league animate-pulse" />
-          ))}
+        <div className="relative w-56">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-ghost" />
+          <input
+            type="text"
+            placeholder="Search players…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-search text-sm"
+          />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-league-text-muted">
-          <Users size={48} className="mb-3 opacity-20" />
-          <p className="text-sm">{members.length === 0 ? 'Not in a lobby' : 'No results found'}</p>
-          <p className="text-xs mt-1">Start or join a lobby in League client</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((m) => (
-            <MemberCard key={m.summonerId} member={m} />
-          ))}
+      </div>
+
+      {/* Empty state */}
+      {!loading && members.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-ink-ghost">
+          <Users size={40} className="mb-3 opacity-20" />
+          <p className="text-sm font-medium text-ink-dim">No lobby detected</p>
+          <p className="text-xs mt-1">Join or create a lobby in the League client</p>
         </div>
       )}
+
+      {/* Members grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {loading
+          ? Array(4).fill(null).map((_, i) => (
+              <div key={i} className="card p-4 flex gap-4">
+                <div className="skeleton w-12 h-12 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-32 rounded" />
+                  <div className="skeleton h-3 w-20 rounded" />
+                  <div className="skeleton h-1.5 w-full rounded-full mt-3" />
+                </div>
+              </div>
+            ))
+          : filtered.map((m, i) => (
+              <MemberCard key={m.summonerId} member={m} isYou={i === 0} />
+            ))
+        }
+      </div>
     </div>
   );
 }

@@ -1,171 +1,213 @@
 import { useEffect, useState } from 'react';
-import { BarChart2, Star, Trophy, Swords, TrendingUp } from 'lucide-react';
-import { getChampionMasteries } from '@/lib/lcu-api';
-import type { ChampionMastery, MasteryClass } from '@/lib/types';
-import { formatNumber, getMasteryColor } from '@/lib/utils';
+import { Flame, Trophy, Star, Swords, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { getChampionMasteries, getChallengeSummary, getChampionIconUrl } from '@/lib/lcu-api';
+import type { MasteryInfo } from '@/lib/types';
 
-const CLASS_META: Record<MasteryClass, { color: string; emoji: string; roles: string[] }> = {
-  Marksman:   { color: '#C89B3C', emoji: '🏹', roles: ['marksman'] },
-  Mage:       { color: '#0AC8B9', emoji: '🔮', roles: ['mage'] },
-  Assassin:   { color: '#E84057', emoji: '🗡️', roles: ['assassin'] },
-  Fighter:    { color: '#F0B232', emoji: '⚔️', roles: ['fighter'] },
-  Tank:       { color: '#576BCE', emoji: '🛡️', roles: ['tank'] },
-  Support:    { color: '#0ACE81', emoji: '💚', roles: ['support'] },
-  Specialist: { color: '#9D48E0', emoji: '✨', roles: ['specialist'] },
-};
-
-const MASTERY_CLASSES: MasteryClass[] = [
-  'Marksman', 'Mage', 'Assassin', 'Fighter', 'Tank', 'Support', 'Specialist',
+const MASTERY_CLASSES = [
+  { name: 'Mage',      color: '#7B5CFA', icon: '✦' },
+  { name: 'Tank',      color: '#4A9EFF', icon: '⬡' },
+  { name: 'ADC',       color: '#FA5C5C', icon: '◎' },
+  { name: 'Assassin',  color: '#C89B3C', icon: '◈' },
+  { name: 'Support',   color: '#10D48A', icon: '❍' },
+  { name: 'Fighter',   color: '#FF8C42', icon: '⬢' },
 ];
 
-interface ClassProgress {
-  name: MasteryClass;
-  champions: number;
-  totalPoints: number;
-  avgLevel: number;
-  maxPoints: number;
+const MOCK_MASTERIES: MasteryInfo[] = [
+  { championId: 1,  championName: 'Annie',       masteryLevel: 7, masteryPoints: 142_800, pointsToNextLevel: 0, tokensEarned: 2, isToken: true },
+  { championId: 22, championName: 'Ashe',        masteryLevel: 7, masteryPoints: 98_400,  pointsToNextLevel: 0, tokensEarned: 1, isToken: true },
+  { championId: 51, championName: 'Caitlyn',     masteryLevel: 6, masteryPoints: 74_200,  pointsToNextLevel: 25_800, tokensEarned: 0, isToken: false },
+  { championId: 11, championName: 'Master Yi',   masteryLevel: 5, masteryPoints: 51_000,  pointsToNextLevel: 9_000,  tokensEarned: 0, isToken: false },
+  { championId: 24, championName: 'Jax',         masteryLevel: 5, masteryPoints: 38_500,  pointsToNextLevel: 21_500, tokensEarned: 0, isToken: false },
+];
+
+const STAT_CARDS = [
+  { label: 'Total Mastery', value: '1.2M', icon: Flame,   color: '#C89B3C', suffix: 'pts' },
+  { label: 'Challenges',    value: '47',   icon: Trophy,   color: '#10D48A', suffix: 'done' },
+  { label: 'Eternals',      value: '12',   icon: Star,     color: '#7B5CFA', suffix: 'sets' },
+  { label: 'Champions',     value: '84',   icon: Swords,   color: '#0BC4E3', suffix: 'played' },
+];
+
+function MasteryBar({ name, color, icon, progress }: { name: string; color: string; icon: string; progress: number }) {
+  return (
+    <div className="flex flex-col items-center gap-2 group">
+      <div className="relative w-10 flex-1 flex items-end rounded overflow-hidden bg-dark"
+           style={{ minHeight: '100px', maxHeight: '160px' }}>
+        {/* Fill */}
+        <div
+          className="w-full rounded transition-all duration-1000 ease-out"
+          style={{
+            height: `${progress}%`,
+            background: `linear-gradient(180deg, ${color}88, ${color})`,
+            boxShadow: `0 0 12px ${color}40`,
+          }}
+        />
+        {/* Glow top */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: progress > 0 ? color : 'transparent', boxShadow: `0 0 6px 2px ${color}60` }}
+        />
+      </div>
+      <span className="text-[10px] text-center text-ink-ghost leading-tight">{name}</span>
+    </div>
+  );
+}
+
+function ChampionRow({ mastery, rank }: { mastery: MasteryInfo; rank: number }) {
+  return (
+    <div className="flex items-center gap-3 py-2.5 group">
+      {/* Rank */}
+      <span className="w-5 text-xs text-ink-ghost text-right tabular-nums">{rank}</span>
+
+      {/* Icon */}
+      <div className="relative flex-shrink-0">
+        <img
+          src={getChampionIconUrl(mastery.championId)}
+          alt={mastery.championName}
+          className="w-9 h-9 rounded-lg object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.4'; }}
+        />
+        {mastery.masteryLevel >= 7 && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-void rounded-full text-[8px] font-bold flex items-center justify-center">
+            {mastery.masteryLevel}
+          </span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-ink-bright truncate">{mastery.championName}</p>
+        <div className="progress-track mt-1" style={{ height: '2px' }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${Math.min((mastery.masteryPoints / 200_000) * 100, 100)}%`,
+              background: mastery.masteryLevel >= 7 ? 'linear-gradient(90deg, #785A28, #C89B3C)' : 'rgba(200,155,60,0.4)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Points */}
+      <span className="text-xs text-ink-dim tabular-nums flex-shrink-0">
+        {mastery.masteryPoints.toLocaleString()}
+      </span>
+
+      {/* Mastery badge */}
+      <span className={`text-[10px] font-bold w-6 text-center flex-shrink-0 ${mastery.masteryLevel >= 7 ? 'text-gold' : 'text-ink-ghost'}`}>
+        M{mastery.masteryLevel}
+      </span>
+    </div>
+  );
 }
 
 export default function Dashboard() {
-  const [masteries, setMasteries] = useState<ChampionMastery[]>([]);
-  const [classProgress, setClassProgress] = useState<ClassProgress[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [masteries, setMasteries] = useState<MasteryInfo[]>(MOCK_MASTERIES);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     getChampionMasteries().then((data) => {
-      setMasteries(data);
-      // Mock class assignment for now (will come from Data Dragon champion data)
-      const progress: ClassProgress[] = MASTERY_CLASSES.map((cls, i) => ({
-        name: cls,
-        champions: Math.floor(Math.random() * 30) + 5,
-        totalPoints: Math.floor(Math.random() * 500000) + 50000,
-        avgLevel: Math.floor(Math.random() * 5) + 3,
-        maxPoints: 800000,
-      }));
-      setClassProgress(progress);
+      if (Array.isArray(data) && data.length > 0) setMasteries(data.slice(0, 10));
       setLoading(false);
     });
   }, []);
 
-  const totalPoints = masteries.reduce((s, m) => s + m.championPoints, 0);
-  const maxLevel = masteries.reduce((m, c) => Math.max(m, c.championLevel), 0);
-  const championed = masteries.filter(m => m.championLevel >= 7).length;
-
-  const stats = [
-    { label: 'Total Mastery Points', value: formatNumber(totalPoints), icon: Star, color: '#C89B3C' },
-    { label: 'Champions Played', value: masteries.length, icon: Swords, color: '#0AC8B9' },
-    { label: 'Mastery 7+', value: championed, icon: Trophy, color: '#E84057' },
-    { label: 'Highest Level', value: maxLevel, icon: TrendingUp, color: '#0ACE81' },
-  ];
-
   return (
-    <div className="p-6 h-full overflow-y-auto space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <BarChart2 className="text-league-gold" size={24} />
-        <div>
-          <h1 className="text-xl font-bold text-league-gold-light">Dashboard</h1>
-          <p className="text-xs text-league-text-secondary">Your League companion overview</p>
-        </div>
-      </div>
+    <div className="p-6 space-y-5 animate-slide-up">
 
-      {/* Stats Row */}
+      {/* ── Stats row ── */}
       <div className="grid grid-cols-4 gap-3">
-        {stats.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="league-card flex items-center gap-3">
+        {STAT_CARDS.map(({ label, value, icon: Icon, color, suffix }) => (
+          <div key={label} className="card p-4 flex items-start gap-3">
             <div
-              className="w-10 h-10 rounded-league flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: `${color}15`, border: `1px solid ${color}30` }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${color}15`, border: `1px solid ${color}25` }}
             >
-              <Icon size={18} style={{ color }} />
+              <Icon size={17} style={{ color }} />
             </div>
             <div>
-              <p className="text-lg font-bold text-league-gold-light">{value}</p>
-              <p className="text-xs text-league-text-muted leading-tight">{label}</p>
+              <p className="text-xl font-bold text-ink-bright tabular-nums leading-none">{value}</p>
+              <p className="text-xs text-ink-muted mt-0.5">{label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Mastery Class Progress Bars */}
-      <div className="league-card">
-        <h2 className="section-title">
-          <Star size={18} className="text-league-gold" />
-          Mastery Class Progress
-        </h2>
-        <div className="flex items-end justify-around gap-4 h-64 px-4 pb-4">
-          {classProgress.map((cls) => {
-            const meta = CLASS_META[cls.name];
-            const pct = Math.min((cls.totalPoints / cls.maxPoints) * 100, 100);
-            return (
-              <div key={cls.name} className="flex flex-col items-center gap-2 flex-1">
-                {/* Vertical bar */}
-                <div className="relative w-full max-w-[50px] h-48 bg-league-bg-darkest rounded-t-lg overflow-hidden border border-league-border-dark">
-                  <div
-                    className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all duration-1000 ease-out"
-                    style={{
-                      height: `${pct}%`,
-                      background: `linear-gradient(to top, ${meta.color}aa, ${meta.color})`,
-                      boxShadow: `0 0 12px ${meta.color}40`,
-                    }}
-                  />
-                  {/* % label inside */}
-                  <p className="absolute bottom-2 w-full text-center text-[10px] font-bold text-white/80">
-                    {Math.round(pct)}%
-                  </p>
-                </div>
-                <span className="text-lg">{meta.emoji}</span>
-                <p className="text-xs text-league-text-secondary text-center font-medium">{cls.name}</p>
-                <p className="text-xs text-league-text-muted">{formatNumber(cls.totalPoints)}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* ── Main 2-col grid ── */}
+      <div className="grid grid-cols-[1fr_280px] gap-5">
 
-      {/* Recent Mastery Highlights */}
-      <div className="league-card">
-        <h2 className="section-title">
-          <TrendingUp size={18} className="text-league-gold" />
-          Top Mastery Champions
-        </h2>
-        {loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-league-bg-dark rounded-league animate-pulse" />
-            ))}
+        {/* Left: Mastery list */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-ink-bright">Top Champions</h2>
+              <p className="text-xs text-ink-muted mt-0.5">by mastery points</p>
+            </div>
+            <button className="flex items-center gap-1 text-xs text-ink-ghost hover:text-gold transition-colors">
+              View all <ArrowUpRight size={11} />
+            </button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {masteries
-              .sort((a, b) => b.championPoints - a.championPoints)
-              .slice(0, 8)
-              .map((m) => (
-                <div key={m.championId} className="flex items-center gap-3 py-2 px-3 rounded-league hover:bg-league-surface-hover transition-colors">
-                  <div
-                    className="w-2 h-8 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: getMasteryColor(m.championLevel) }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-league-text-primary font-medium">Champion #{m.championId}</span>
-                      <span className="text-xs text-league-text-muted">M{m.championLevel}</span>
-                    </div>
-                    <div className="league-progress">
-                      <div
-                        className="league-progress-bar"
-                        style={{
-                          width: `${Math.min((m.championPointsSinceLastLevel / (m.championPointsSinceLastLevel + m.championPointsUntilNextLevel)) * 100, 100)}%`,
-                          background: getMasteryColor(m.championLevel),
-                        }}
-                      />
-                    </div>
+
+          <div className="divide-y divide-white/[0.04]">
+            {(loading ? Array(5).fill(null) : masteries).map((m, i) =>
+              m ? (
+                <ChampionRow key={m.championId} mastery={m} rank={i + 1} />
+              ) : (
+                <div key={i} className="flex items-center gap-3 py-3">
+                  <div className="skeleton w-4 h-4 rounded" />
+                  <div className="skeleton w-9 h-9 rounded-lg" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="skeleton h-3 w-28 rounded" />
+                    <div className="skeleton h-1.5 w-full rounded-full" />
                   </div>
-                  <span className="text-xs text-league-gold font-mono">{formatNumber(m.championPoints)}</span>
+                  <div className="skeleton h-3 w-16 rounded" />
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Right: Mastery class bars + recent */}
+        <div className="flex flex-col gap-4">
+          {/* Class progress */}
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-ink-bright mb-1">Mastery Classes</h2>
+            <p className="text-xs text-ink-muted mb-4">progress by role</p>
+            <div className="flex items-end gap-2 h-40">
+              {MASTERY_CLASSES.map((cls, i) => (
+                <MasteryBar
+                  key={cls.name}
+                  {...cls}
+                  progress={[88, 62, 74, 45, 91, 58][i]}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="card p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-ink-bright">Today</h2>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Mastery gained',   value: '+4,200',  color: '#C89B3C' },
+                { label: 'Games played',      value: '7',       color: '#10D48A' },
+                { label: 'Challenges done',   value: '3',       color: '#7B5CFA' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between text-sm">
+                  <span className="text-ink-muted">{label}</span>
+                  <span className="font-semibold tabular-nums" style={{ color }}>{value}</span>
                 </div>
               ))}
+            </div>
+
+            <div className="divider" />
+
+            <div className="flex items-center gap-2 text-xs text-ink-ghost">
+              <TrendingUp size={11} className="text-emerald" />
+              <span>+12% from yesterday</span>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
