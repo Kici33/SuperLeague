@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Users, Trophy, Swords, Flame, Star,
-  Palette, Wrench, Globe, UserPen, Bug, Settings,
-  RefreshCw, Wifi, WifiOff, ChevronRight,
+  Palette, Wrench, Globe, UserPen, Bug, Settings, UserCircle,
+  RefreshCw, WifiOff, Copy, Check,
 } from 'lucide-react';
 import { useLcu } from './hooks/useLcu';
 import { pages } from './pages_config';
@@ -20,6 +20,7 @@ const NAV_ITEMS: { key: PageKey; icon: React.ElementType; label: string; group: 
   { key: 'builds',     icon: Wrench,           label: 'Builds',       group: 'Collection' },
   { key: 'teams',      icon: Globe,            label: 'Teams',        group: 'Social' },
   { key: 'profile',    icon: UserPen,          label: 'Profile',      group: 'Social' },
+  { key: 'accounts',   icon: UserCircle,       label: 'Accounts',     group: 'Social' },
   { key: 'debug',      icon: Bug,              label: 'Debug',        group: 'Tools' },
   { key: 'settings',   icon: Settings,         label: 'Settings',     group: 'Tools' },
 ];
@@ -29,8 +30,19 @@ const GROUPS = ['Overview', 'Progress', 'Collection', 'Social', 'Tools'];
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const { connected, summoner, loading, refresh } = useLcu();
+  const [copied, setCopied] = useState(false);
 
-  const ActivePage = pages[activePage].component;
+  const ActivePage = pages[activePage]?.component;
+
+  const handleCopyName = () => {
+    if (!summoner?.displayName) return;
+    const text = summoner.gameName
+      ? `${summoner.gameName}#${summoner.tagLine ?? ''}`
+      : summoner.displayName;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-abyss">
@@ -79,10 +91,10 @@ export default function App() {
           })}
         </nav>
 
-        {/* Connection + summoner */}
+        {/* ── Bottom: Connection + Summoner ── */}
         <div className="divider mx-4" />
         <div className="p-3 space-y-2">
-          {/* Status pill */}
+          {/* Connection status */}
           <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${connected ? 'bg-emerald/8' : 'bg-white/[0.03]'}`}>
             <div className="flex items-center gap-2">
               <span className={`status-dot ${connected ? 'online' : 'offline'}`} />
@@ -90,28 +102,35 @@ export default function App() {
                 {loading ? 'Connecting…' : connected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
-            <button
-              onClick={refresh}
-              className="text-ink-ghost hover:text-ink transition-colors"
-              title="Refresh connection"
-            >
+            <button onClick={refresh} className="text-ink-ghost hover:text-ink transition-colors" title="Refresh">
               <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
 
-          {/* Summoner info */}
+          {/* Summoner card with icon + name + copy */}
           {connected && summoner && (
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03]">
+            <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white/[0.03] group">
               <img
                 src={`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${summoner.profileIconId ?? 29}.jpg`}
                 alt=""
                 className="w-8 h-8 rounded-full object-cover border border-gold/20 flex-shrink-0"
                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
               />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-ink-bright truncate">{summoner.displayName}</p>
-                <p className="text-[10px] text-ink-ghost">Lvl {summoner.summonerLevel}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-ink-bright truncate">
+                  {summoner.gameName ?? summoner.displayName}
+                </p>
+                <p className="text-[10px] text-ink-ghost truncate">
+                  {summoner.tagLine ? `#${summoner.tagLine}` : `Lvl ${summoner.summonerLevel}`}
+                </p>
               </div>
+              <button
+                onClick={handleCopyName}
+                className="text-ink-ghost hover:text-gold transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                title="Copy name"
+              >
+                {copied ? <Check size={12} className="text-emerald" /> : <Copy size={12} />}
+              </button>
             </div>
           )}
         </div>
@@ -122,8 +141,8 @@ export default function App() {
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.05] bg-dark/40 flex-shrink-0">
           <div>
-            <h1 className="text-base font-semibold text-ink-bright">{pages[activePage].title}</h1>
-            <p className="text-xs text-ink-muted">{pages[activePage].description}</p>
+            <h1 className="text-base font-semibold text-ink-bright">{pages[activePage]?.title}</h1>
+            <p className="text-xs text-ink-muted">{pages[activePage]?.description}</p>
           </div>
           {!connected && !loading && (
             <div className="flex items-center gap-2 text-xs text-ruby bg-ruby/10 border border-ruby/20 px-3 py-1.5 rounded-lg">
@@ -136,7 +155,7 @@ export default function App() {
         {/* Page content */}
         <div className="flex-1 overflow-hidden">
           <div key={activePage} className="h-full overflow-y-auto animate-fade-in">
-            <ActivePage />
+            {ActivePage ? <ActivePage /> : <div className="p-6 text-ink-ghost">Page not found</div>}
           </div>
         </div>
       </main>

@@ -1,9 +1,34 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
-  ConnectionStatus, Summoner, Challenge, ChampionMastery, LobbyMember,
-  EternalSet, SkinInfo, LcuRequest, LcuResponse, Account, MatchHistoryEntry,
-  MasterySnapshot, DailyMastery
+  ConnectionStatus, Summoner, LcuRequest, LcuResponse, Account,
 } from './types';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Core helper: ALL LCU data fetching goes through the working lcu_request
+// command, which uses lcu_raw under the hood and handles errors properly.
+// This avoids irelia type-deserialization issues in the individual commands.
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function lcuGet(endpoint: string): Promise<any> {
+  try {
+    const res: LcuResponse = await invoke('lcu_request', {
+      request: { method: 'GET', endpoint },
+    });
+    if (res.status >= 200 && res.status < 300 && res.body) {
+      return JSON.parse(res.body);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function toArray(data: any): any[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'object') return Object.values(data);
+  return [];
+}
 
 // ── Connection ──
 
@@ -36,116 +61,44 @@ export async function getCurrentSummoner(): Promise<Summoner | null> {
 // ── Challenges ──
 
 export async function getChallenges(): Promise<any[]> {
-  try {
-    const raw = await invoke('get_challenges');
-    // LCU returns an object keyed by challenge ID, not an array
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') return Object.values(raw);
-    return [];
-  } catch {
-    return [];
-  }
+  const raw = await lcuGet('/lol-challenges/v1/challenges/local-player/');
+  return toArray(raw);
 }
 
-export async function getChallengesSummary(): Promise<Record<string, number>> {
-  try {
-    return await invoke('get_challenges_summary');
-  } catch {
-    return {};
-  }
+export async function getChallengesSummary(): Promise<Record<string, any>> {
+  return (await lcuGet('/lol-challenges/v1/summary-player-data/local-player')) ?? {};
 }
 
 // ── Champion Mastery ──
 
 export async function getChampionMasteries(): Promise<any[]> {
-  try {
-    const raw = await invoke('get_champion_masteries');
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') return Object.values(raw);
-    return [];
-  } catch {
-    return [];
-  }
+  const raw = await lcuGet('/lol-champion-mastery/v1/local-player/champion-mastery/top?count=200');
+  return toArray(raw);
 }
 
-export async function getChampionMastery(championId: number): Promise<ChampionMastery | null> {
-  try {
-    return await invoke('get_champion_mastery', { championId });
-  } catch {
-    return null;
-  }
+export async function getChampionMastery(championId: number): Promise<any> {
+  return await lcuGet(`/lol-champion-mastery/v1/local-player/champion-mastery/by-champion-id/${championId}`);
 }
 
 // ── Lobby ──
 
-export async function getLobbyMembers(): Promise<LobbyMember[]> {
-  try {
-    return await invoke('get_lobby_members');
-  } catch {
-    return [];
-  }
+export async function getLobbyMembers(): Promise<any[]> {
+  const raw = await lcuGet('/lol-lobby/v2/lobby/members');
+  return toArray(raw);
 }
 
 // ── Eternals ──
 
 export async function getEternals(): Promise<any[]> {
-  try {
-    const raw = await invoke('get_eternals');
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') return Object.values(raw);
-    return [];
-  } catch {
-    return [];
-  }
+  const raw = await lcuGet('/lol-statstones/v2/player-statstones-self');
+  return toArray(raw);
 }
 
 // ── Skins ──
 
 export async function getOwnedSkins(): Promise<any[]> {
-  try {
-    const raw = await invoke('get_owned_skins');
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') return Object.values(raw);
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-// ── Match History ──
-
-export async function getMatchHistory(count?: number): Promise<MatchHistoryEntry[]> {
-  try {
-    return await invoke('get_match_history', { count: count || 20 });
-  } catch {
-    return [];
-  }
-}
-
-export async function getChampionMatchHistory(championId: number): Promise<MatchHistoryEntry[]> {
-  try {
-    return await invoke('get_champion_match_history', { championId });
-  } catch {
-    return [];
-  }
-}
-
-// ── Mastery Snapshots ──
-
-export async function getMasterySnapshots(championId?: number): Promise<MasterySnapshot[]> {
-  try {
-    return await invoke('get_mastery_snapshots', { championId });
-  } catch {
-    return [];
-  }
-}
-
-export async function getDailyMastery(days?: number): Promise<DailyMastery[]> {
-  try {
-    return await invoke('get_daily_mastery', { days: days || 30 });
-  } catch {
-    return [];
-  }
+  const raw = await lcuGet('/lol-champions/v1/inventories/local-player/skins-minimal');
+  return toArray(raw);
 }
 
 // ── Profile ──
@@ -224,9 +177,7 @@ export async function testDiscordWebhook(webhookUrl: string): Promise<boolean> {
   return sendDiscordWebhook(webhookUrl, '🎮 SuperLeague connected! Webhook test successful.');
 }
 
-// ── Champions Data (from Data Dragon) ──
-
-const DDRAGON_VERSION = '14.4.1';
+// ── Asset URLs ──
 
 export function getChampionIconUrl(championId: number): string {
   return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${championId}.png`;
@@ -237,7 +188,7 @@ export function getProfileIconUrl(iconId: number): string {
 }
 
 export function getItemIconUrl(itemId: number): string {
-  return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/item/${itemId}.png`;
+  return `https://ddragon.leagueoflegends.com/cdn/14.4.1/img/item/${itemId}.png`;
 }
 
 export function getSkinSplashUrl(championId: number, skinId: number): string {
@@ -248,70 +199,33 @@ export function getSkinTileUrl(championId: number, skinId: number): string {
   return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-tiles/${championId}/${skinId}.jpg`;
 }
 
-export function getSummonerSpellIconUrl(spellId: number): string {
-  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/data/spells/icons2d/summonerflash.png`;
-}
-
 // ── Ranked / LP ──
 
-export async function getRankedStats(): Promise<Record<string, unknown>> {
-  try {
-    return await invoke('get_ranked_stats');
-  } catch {
-    return {};
-  }
+export async function getRankedStats(): Promise<any> {
+  return (await lcuGet('/lol-ranked/v1/current-ranked-stats')) ?? {};
 }
 
-export async function getRecentMatches(): Promise<Record<string, unknown>> {
-  try {
-    return await invoke('get_recent_matches');
-  } catch {
-    return {};
-  }
+export async function getRecentMatches(): Promise<any> {
+  return (await lcuGet('/lol-match-history/v1/products/lol/current-summoner/matches')) ?? {};
 }
 
 // ── Champions & Builds ──
 
-export async function getAllChampions(): Promise<unknown[]> {
-  try {
-    return await invoke('get_all_champions');
-  } catch {
-    return [];
-  }
+export async function getAllChampions(): Promise<any[]> {
+  const raw = await lcuGet('/lol-champions/v1/owned-champions-minimal');
+  return toArray(raw);
 }
 
-export async function getChampionBuilds(championId: number): Promise<unknown> {
-  try {
-    return await invoke('get_champion_builds', { championId });
-  } catch {
-    return null;
-  }
+export async function getChampionBuilds(championId: number): Promise<any> {
+  return await lcuGet(`/lol-champions/v1/inventories/local-player/champions/${championId}/recommended-item-defaults`);
 }
 
-// ── Summoner Lookup (Team Builder) ──
+// ── Summoner Lookup ──
 
-export async function getSummonerByName(name: string): Promise<unknown> {
-  try {
-    return await invoke('get_summoner_by_name', { name });
-  } catch {
-    return null;
-  }
+export async function getSummonerByName(name: string): Promise<any> {
+  return await lcuGet(`/lol-summoner/v1/summoners?name=${encodeURIComponent(name)}`);
 }
 
-export async function getSummonerChallenges(puuid: string): Promise<unknown> {
-  try {
-    return await invoke('get_summoner_challenges', { puuid });
-  } catch {
-    return null;
-  }
-}
-
-// ── Challenge Summary (convenience) ──
-
-export async function getChallengeSummary(): Promise<Record<string, unknown>> {
-  try {
-    return await invoke('get_challenges_summary');
-  } catch {
-    return {};
-  }
+export async function getSummonerChallenges(puuid: string): Promise<any> {
+  return await lcuGet(`/lol-challenges/v1/summary-player-data/puuid/${puuid}`);
 }

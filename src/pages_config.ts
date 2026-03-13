@@ -1,6 +1,6 @@
 import {
   Home, Users, Trophy, Star, Swords, Flame, Palette,
-  Wrench, Globe, UserPen, Bug, Settings,
+  Wrench, Globe, UserPen, Bug, Settings, UserCircle,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
@@ -14,6 +14,7 @@ import Skins from '@/pages/skins';
 import Builds from '@/pages/builds';
 import Teams from '@/pages/teams';
 import Profile from '@/pages/profile';
+import Accounts from '@/pages/accounts';
 import Debug from '@/pages/debug';
 import SettingsPage from '@/pages/settings';
 
@@ -85,6 +86,12 @@ export const pages: Record<string, PageConfig> = {
     component: Profile,
     description: 'Customize your profile',
   },
+  accounts: {
+    title: 'Accounts',
+    icon: UserCircle,
+    component: Accounts,
+    description: 'Manage & switch accounts',
+  },
   debug: {
     title: 'Debug',
     icon: Bug,
@@ -95,8 +102,9 @@ export const pages: Record<string, PageConfig> = {
     title: 'Settings',
     icon: Settings,
     component: SettingsPage,
-    description: 'App settings & accounts',
+    description: 'App settings',
   },
 };
 
 export const pageKeys = Object.keys(pages) as (keyof typeof pages)[];
+
