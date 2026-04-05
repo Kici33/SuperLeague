@@ -242,6 +242,53 @@ export default function ChampionBreakdown() {
            challenges.obtained && challenges.arenaFirst && challenges.arenaPlay;
   };
 
+  const areEternalsComplete = (championId: number): boolean => {
+    const eternals = eternalsData[championId];
+    if (!eternals || eternals.sets.length === 0) return false;
+    
+    // Check if all eternals have max milestones
+    return eternals.sets.every(set => {
+      const maxMilestones = set.stonesOwned * 5;
+      return maxMilestones > 0 && set.milestonesPassed >= maxMilestones;
+    });
+  };
+
+  const areChallengesComplete = (championId: number): boolean => {
+    const challenges = championChallenges[championId];
+    if (!challenges) return false;
+    
+    return challenges.aramSGrade && challenges.coopWin && challenges.winNoDeath &&
+           challenges.sPlusGrade && challenges.pentakill && challenges.winGame &&
+           challenges.obtained && challenges.arenaFirst && challenges.arenaPlay;
+  };
+
+  const hasMastery10Plus = (championId: number): boolean => {
+    const mastery = masteries.find(m => m.championId === championId);
+    return (mastery?.championLevel ?? 0) >= 10;
+  };
+
+  const shouldShowBorder = (section: 'eternals' | 'challenges' | 'mastery' | 'stats', championId: number): boolean => {
+    if (!championId) return false;
+    
+    const eternalsComplete = areEternalsComplete(championId);
+    const challengesComplete = areChallengesComplete(championId);
+    const mastery10 = hasMastery10Plus(championId);
+    const allComplete = eternalsComplete && challengesComplete && mastery10;
+    
+    switch (section) {
+      case 'eternals':
+        return eternalsComplete || allComplete;
+      case 'challenges':
+        return challengesComplete || allComplete;
+      case 'mastery':
+        return mastery10 || allComplete;
+      case 'stats':
+        return allComplete;
+      default:
+        return false;
+    }
+  };
+
   const detail = selected;
   const lvl = detail?.championLevel ?? 0;
   const color = M_COLOR[Math.min(lvl, 10)] ?? '#5B5A56';
@@ -305,7 +352,7 @@ export default function ChampionBreakdown() {
       </div>
 
       {/* Right: detail panel */}
-      <div className="flex-1 min-w-0 overflow-y-auto no-scrollbar">
+      <div className="flex-1 min-w-0 overflow-y-auto no-scrollbar p-1">
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full text-ink-ghost">
             <Swords size={36} className="mb-3 opacity-20" />
@@ -336,7 +383,7 @@ export default function ChampionBreakdown() {
             </div>
 
             {/* Progress to next level */}
-            <div className={`card p-4 ${isMaxed ? 'ring-2 ring-gold border-gold/40' : ''}`}>
+            <div className={`card p-4 ${shouldShowBorder('mastery', selected.championId) ? 'ring-2 ring-gold/80 border-gold/40' : ''}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-ink-muted">Progress to Mastery {lvl + 1}</span>
                 <span className="text-xs text-ink-ghost tabular-nums">{pct}%</span>
@@ -352,7 +399,7 @@ export default function ChampionBreakdown() {
 
             {/* Eternals */}
             {selectedEternals && selectedEternals.sets.length > 0 && (
-              <div className={`card p-4 ${isMaxed ? 'ring-2 ring-gold border-gold/40' : ''}`}>
+              <div className={`card p-4 ${shouldShowBorder('eternals', selected.championId) ? 'ring-2 ring-gold/80 border-gold/40' : ''}`}>
                 <h3 className="text-sm font-bold text-ink-bright mb-3 flex items-center gap-2">
                   <Star size={14} className="text-purple-400" />
                   Eternals
@@ -439,7 +486,7 @@ export default function ChampionBreakdown() {
 
             {/* Challenge Contributions */}
             {selectedChallenges && (
-              <div className={`card p-4 ${isMaxed ? 'ring-2 ring-gold border-gold/40' : ''}`}>
+              <div className={`card p-4 ${shouldShowBorder('challenges', selected.championId) ? 'ring-2 ring-gold/80 border-gold/40' : ''}`}>
                 <h3 className="text-sm font-bold text-ink-bright mb-3 flex items-center gap-2">
                   <Award size={14} className="text-gold" />
                   Challenge Contributions
@@ -481,7 +528,7 @@ export default function ChampionBreakdown() {
                   ? new Date(detail.lastPlayTime).toLocaleDateString()
                   : '—', color: '#576BCE' },
               ].map(({ label, value, color: c }) => (
-                <div key={label} className={`card-inset text-center py-3 ${isMaxed ? 'ring-2 ring-gold border-gold/40' : ''}`}>
+                <div key={label} className={`card-inset text-center py-3 ${shouldShowBorder('stats', selected.championId) ? 'ring-2 ring-gold/80 border-gold/40' : ''}`}>
                   <p className="text-base font-bold tabular-nums" style={{ color: c }}>{value}</p>
                   <p className="text-[10px] text-ink-ghost mt-0.5">{label}</p>
                 </div>
