@@ -2,6 +2,28 @@ import { useEffect, useState, useMemo } from 'react';
 import { Star, Target, TrendingUp, Search } from 'lucide-react';
 import { getChampionMasteries, getChampionIconUrl, getChallenges } from '@/lib/lcu-api';
 
+// Champion name lookup from Community Dragon
+let championNames: Record<number, string> = {};
+async function loadChampionNames(): Promise<Record<number, string>> {
+  if (Object.keys(championNames).length > 0) return championNames;
+  try {
+    const res = await fetch('https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-summary.json');
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      data.forEach((c: any) => {
+        if (c.id && c.id !== -1) championNames[c.id] = c.name ?? c.alias ?? `#${c.id}`;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load champion names:', e);
+  }
+  return championNames;
+}
+
+function getChampionName(championId: number): string {
+  return championNames[championId] ?? `Champion #${championId}`;
+}
+
 function fmtNum(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
@@ -24,6 +46,7 @@ export default function Mastery() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    loadChampionNames();
     Promise.all([getChampionMasteries(), getChallenges()]).then(([m, c]) => {
       if (Array.isArray(m) && m.length > 0) {
         setMasteries(m.sort((a: any, b: any) => (b.championPoints ?? 0) - (a.championPoints ?? 0)));
@@ -49,7 +72,12 @@ export default function Mastery() {
   const filteredMasteries = useMemo(() => {
     let list = activeTab === 'overview' ? masteries.slice(0, 15) : masteries;
     if (search && activeTab === 'champions') {
-      list = list.filter(m => String(m.championId).includes(search));
+      const q = search.toLowerCase();
+      list = list.filter(m => {
+        const name = getChampionName(m.championId).toLowerCase();
+        const id = String(m.championId);
+        return name.includes(q) || id.includes(q);
+      });
     }
     return list;
   }, [masteries, activeTab, search]);
@@ -160,7 +188,7 @@ export default function Mastery() {
                   onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs text-ink-bright font-medium">Champion #{m.championId}</span>
+                    <span className="text-xs text-ink-bright font-medium">{getChampionName(m.championId)}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${color}15`, color }}>M{lvl}</span>
                       <span className="text-xs text-gold tabular-nums">{fmtNum(m.championPoints ?? 0)}</span>
