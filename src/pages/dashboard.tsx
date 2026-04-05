@@ -204,9 +204,14 @@ function MasteryClassPanel({ classData }: { classData: { name: string; m7: numbe
                         <Emblem tier={cur?.tier ?? 'None'} size={16} />
                         <span className="text-sm text-ink font-medium text-center leading-tight">{cls.name}</span>
 
-                        {/* Hover tooltip */}
+                        {/* Hover tooltip - fixed positioning */}
                         {isHovered && (
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-12 z-50 p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[120px]">
+                            <div className="fixed z-[100] p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[120px] pointer-events-none"
+                                style={{
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)'
+                                }}>
                                 <div className="text-xs font-semibold text-ink-bright mb-1.5">{cls.name}</div>
                                 <div className="space-y-0.5">
                                     {thresholds.map(t => {
@@ -727,9 +732,22 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
 
 // ── Pinned Champions Panel ───────────────────────────────────────────────────
 function PinnedChampionsPanel({ matches, masteries }: { matches: MatchPoint[]; masteries: any[] }) {
-    const [pinnedChampions, setPinnedChampions] = useState<PinnedChampion[]>([]);
+    const [pinnedChampions, setPinnedChampions] = useState<PinnedChampion[]>(() => {
+        // Load from localStorage on mount
+        try {
+            const saved = localStorage.getItem('pinnedChampions');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
     const [showPinSearch, setShowPinSearch] = useState(false);
     const [pinSearchQuery, setPinSearchQuery] = useState('');
+
+    // Persist to localStorage whenever pinnedChampions changes
+    useEffect(() => {
+        localStorage.setItem('pinnedChampions', JSON.stringify(pinnedChampions));
+    }, [pinnedChampions]);
 
     // Get all champions from masteries for pin search
     const allChampions = useMemo(() => {
@@ -1060,7 +1078,7 @@ export default function Dashboard() {
     );
 }
 
-// Compact challenge row for sidebar
+// Compact challenge row for sidebar - with token display for mastery challenges
 function ChallengeRowCompact({ c }: { c: any }) {
     const tier = (c.currentLevel ?? c.level ?? 'NONE').toUpperCase();
     const cur = c.currentValue ?? 0;
@@ -1069,6 +1087,9 @@ function ChallengeRowCompact({ c }: { c: any }) {
     const isMasterPlus = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier);
     const pct = (!isMasterPlus && next > prev) ? Math.min(((cur - prev) / (next - prev)) * 100, 100) : 100;
     const color = TIER_C[tier] ?? TIER_C.NONE;
+    
+    // Check if this is a mastery-count challenge (like "10 champions at Mastery 10")
+    const isMasteryChallenge = (c.name ?? '').toLowerCase().includes('master') && typeof cur === 'number' && cur < 200;
 
     return (
         <div className="flex items-center gap-2 py-1.5">
@@ -1076,9 +1097,21 @@ function ChallengeRowCompact({ c }: { c: any }) {
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xs font-medium text-ink-bright truncate pr-1">{c.name ?? `#${c.id}`}</span>
-                    <span className="text-sm text-ink tabular-nums flex-shrink-0 font-medium">
-                        {isMasterPlus ? '✓' : `${cur}/${next}`}
-                    </span>
+                    {isMasteryChallenge && !isMasterPlus ? (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-0.5">
+                                {Array.from({ length: Math.min(cur, 10) }).map((_, i) => (
+                                    <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                                ))}
+                                {cur > 10 && <span className="text-xs text-ink ml-0.5">+{cur - 10}</span>}
+                            </div>
+                            <span className="text-xs text-ink-ghost">/{next}</span>
+                        </div>
+                    ) : (
+                        <span className="text-sm text-ink tabular-nums flex-shrink-0 font-medium">
+                            {isMasterPlus ? '✓' : `${cur}/${next}`}
+                        </span>
+                    )}
                 </div>
                 <div className="h-0.5 rounded-full bg-white/[0.06] overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
@@ -1093,15 +1126,18 @@ function ChampionRowCompact({ m, rank }: { m: any; rank: number }) {
     const lvl = m.championLevel ?? 0;
     const pts = m.championPoints ?? 0;
     const color = lvl >= 7 ? '#C89B3C' : '#5B5A56';
+    const name = m.championName || getChampionName(m.championId);
+    
     return (
         <div className="flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-white/[0.02] transition-colors">
             <span className="w-3 text-xs text-ink-ghost text-right flex-shrink-0 tabular-nums">{rank}</span>
             <img src={getChampionIconUrl(m.championId)} alt=""
                 className="w-5 h-5 rounded object-cover flex-shrink-0 border border-white/[0.06]"
                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
+            <span className="flex-1 text-xs text-ink-bright truncate min-w-0">{name}</span>
             <span className="text-xs font-bold px-1 py-0.5 rounded flex-shrink-0"
                 style={{ background: `${color}15`, color }}>M{lvl}</span>
-            <span className="flex-1 text-xs text-gold tabular-nums text-right">
+            <span className="text-xs text-gold tabular-nums flex-shrink-0">
                 {pts >= 1_000_000 ? `${(pts / 1_000_000).toFixed(1)}M` : pts >= 1_000 ? `${(pts / 1_000).toFixed(0)}K` : String(pts)}
             </span>
         </div>
