@@ -1010,20 +1010,22 @@ export default function Dashboard() {
         });
     }, []);
 
-    const classData = useMemo(() => CLASSES.map((name) => {
-        const ids = CLASS_CHALLENGE_PROGRESS_IDS[name] ?? [];
+    const classData = useMemo(() => {
         const challengeById = new Map<number, any>(
             challenges.map(c => [Number(c?.id ?? c?.challengeId), c])
         );
-        const challenge = ids.map(id => challengeById.get(id)).find(Boolean);
-        const current = Math.floor(Number(challenge?.currentValue ?? 0));
-        const next = Math.floor(Number(challenge?.nextThreshold ?? challenge?.nextLevelValue ?? 0));
-        return {
-            name,
-            m7: Number.isFinite(current) ? current : 0,
-            m10: Number.isFinite(next) ? next : 0,
-        };
-    }), [challenges]);
+        return CLASSES.map((name) => {
+            const ids = CLASS_CHALLENGE_PROGRESS_IDS[name] ?? [];
+            const challenge = ids.map(id => challengeById.get(id)).find(Boolean);
+            const current = Math.floor(Number(challenge?.currentValue ?? 0));
+            const next = Math.floor(Number(challenge?.nextThreshold ?? challenge?.nextLevelValue ?? 0));
+            return {
+                name,
+                m7: Number.isFinite(current) ? current : 0,
+                m10: Number.isFinite(next) ? next : 0,
+            };
+        });
+    }, [challenges]);
 
     const filteredMasteries = useMemo(() => {
         if (champFilter === 'hideM10') return masteries.filter(m => (m.championLevel ?? 0) < 10);
