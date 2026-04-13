@@ -133,24 +133,61 @@ pub async fn lcu_direct_get(endpoint: &str) -> Result<Value, String> {
     }
 }
 
-/// Generic LCU request — reqwest for GET, irelia for mutations
-pub async fn lcu_raw(method: &str, endpoint: &str, body: &Value) -> Result<Value, String> {
-    if method == "GET" {
-        return lcu_direct_get(endpoint).await;
+/// Make a JSON request directly to the LCU for any HTTP method.
+pub async fn lcu_direct_request(method: &str, endpoint: &str, body: &Value) -> Result<Value, String> {
+    let (port, auth) = get_lcu_credentials()
+        .ok_or_else(|| "League client not detected".to_string())?;
+
+    let http = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .use_native_tls()
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    let url = format!("https://127.0.0.1:{}{}", port, endpoint);
+    let upper = method.to_uppercase();
+
+    let mut req = http
+        .request(
+            reqwest::Method::from_bytes(upper.as_bytes())
+                .map_err(|e| format!("Invalid method {upper}: {e}"))?,
+            &url,
+        )
+        .header("Authorization", &auth)
+        .header("Accept", "application/json");
+
+    if upper != "GET" {
+        req = req.header("Content-Type", "application/json");
+        if !body.is_null() {
+            req = req.body(body.to_string());
+        }
     }
 
-    let client = match get_lcu_client() {
-        Some(c) => c,
-        None => return Err("League client not connected".to_string()),
-    };
+    let response = req
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    let result: Result<Value, _> = match method {
-        "DELETE" => client.delete::<Value>(endpoint).await,
-        "POST"   => client.post::<Value, Value>(endpoint, body.clone()).await,
-        "PUT"    => client.put::<Value, Value>(endpoint, body.clone()).await,
-        "PATCH"  => client.patch::<Value, Value>(endpoint, body.clone()).await,
-        _        => return Err(format!("Unsupported method: {method}")),
-    };
+    let status = response.status();
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Read body failed: {e}"))?;
 
-    result.map_err(|e| e.to_string())
+    eprintln!("[LCU] {} {} => {} ({} bytes)", upper, endpoint, status.as_u16(), text.len());
+
+    if !status.is_success() {
+        return Err(format!("LCU {}: {}", status.as_u16(), &text[..300.min(text.len())]));
+    }
+
+    if text.trim().is_empty() || text.trim() == "null" {
+        Ok(Value::Null)
+    } else {
+        serde_json::from_str(&text).or_else(|_| Ok(Value::String(text)))
+    }
+}
+
+/// Generic LCU request — reqwest for GET, irelia for mutations
+pub async fn lcu_raw(method: &str, endpoint: &str, body: &Value) -> Result<Value, String> {
+    lcu_direct_request(method, endpoint, body).await
 }

@@ -221,7 +221,7 @@ export interface ConnectionStatus {
 export interface LcuRequest {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   endpoint: string;
-  body?: string;
+  body?: unknown;
 }
 
 export interface LcuResponse {
