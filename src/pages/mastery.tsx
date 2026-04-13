@@ -30,6 +30,55 @@ function fmtNum(n: number) {
   return String(n);
 }
 
+function normalizeChallengeTier(tier: unknown): string {
+  const t = String(tier ?? 'NONE').trim().toUpperCase();
+  const aliases: Record<string, string> = {
+    N: 'NONE', NONE: 'NONE',
+    I: 'IRON', IRON: 'IRON',
+    B: 'BRONZE', BRONZE: 'BRONZE',
+    S: 'SILVER', SILVER: 'SILVER',
+    G: 'GOLD', GOLD: 'GOLD',
+    P: 'PLATINUM', PLAT: 'PLATINUM', PLATINUM: 'PLATINUM',
+    D: 'DIAMOND', DIA: 'DIAMOND', DIAMOND: 'DIAMOND',
+    M: 'MASTER', MASTER: 'MASTER',
+    GM: 'GRANDMASTER', GRANDMASTER: 'GRANDMASTER',
+    C: 'CHALLENGER', CHALL: 'CHALLENGER', CHALLENGER: 'CHALLENGER',
+  };
+  return aliases[t] ?? 'NONE';
+}
+
+function ChallengeTokenIcon({ challengeId, tier, size = 28 }: { challengeId: number; tier: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const normalizedTier = normalizeChallengeTier(tier);
+  const tierColors: Record<string, string> = {
+    NONE: '#5B5A56', IRON: '#6B6B6B', BRONZE: '#CD7F32', SILVER: '#C0C8D4',
+    GOLD: '#C89B3C', PLATINUM: '#4E9996', DIAMOND: '#576BCE', MASTER: '#9D48E0',
+    GRANDMASTER: '#E84057', CHALLENGER: '#F4C874',
+  };
+  const color = tierColors[normalizedTier] ?? '#5B5A56';
+
+  if (failed || !Number.isFinite(challengeId) || challengeId <= 0) {
+    return (
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}15`, border: `1px solid ${color}30`, color }}
+      >
+        <span className="text-[10px] font-bold">{normalizedTier.charAt(0)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`https://raw.communitydragon.org/latest/game/assets/challenges/config/${challengeId}/tokens/${normalizedTier.toLowerCase()}.png`}
+      alt={normalizedTier}
+      style={{ width: size, height: size, opacity: normalizedTier === 'NONE' ? 0.4 : 1 }}
+      className="object-contain flex-shrink-0"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 const MASTERY_COLOR: Record<number, string> = {
   1: '#5B5A56', 2: '#5B5A56', 3: '#5B5A56', 4: '#5B5A56',
   5: '#E84057', 6: '#9D48E0', 7: '#C89B3C', 8: '#C89B3C',
@@ -114,19 +163,17 @@ export default function Mastery() {
               const next = c.nextLevelValue ?? c.nextThreshold ?? 1;
               const prev = c.previousLevelValue ?? 0;
               const pct = next > prev ? Math.min(Math.round(((current - prev) / (next - prev)) * 100), 100) : 100;
-              const tier = c.currentLevel ?? c.level ?? 'NONE';
+              const tier = normalizeChallengeTier(c.currentLevel ?? c.level);
               const tierColors: Record<string, string> = {
                 NONE: '#5B5A56', IRON: '#6B6B6B', BRONZE: '#CD7F32', SILVER: '#C0C8D4',
                 GOLD: '#C89B3C', PLATINUM: '#4E9996', DIAMOND: '#576BCE', MASTER: '#9D48E0',
                 GRANDMASTER: '#E84057', CHALLENGER: '#F4C874',
               };
               const color = tierColors[tier] ?? '#5B5A56';
+              const challengeId = Number(c.id ?? c.challengeId ?? 0);
               return (
                 <div key={c.id ?? i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-                    <Star size={11} style={{ color }} />
-                  </div>
+                  <ChallengeTokenIcon challengeId={challengeId} tier={tier} size={28} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-[10px] font-medium text-ink-bright truncate">{c.name ?? `#${c.id}`}</span>
