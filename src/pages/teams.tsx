@@ -30,19 +30,52 @@ const M_COLOR: Record<number, string> = {
   9: '#C89B3C', 10: '#F4C874',
 };
 
-/* Globetrotter regions */
-const GLOBETROTTER_REGIONS = [
-  'Bandle City','Bilgewater','Demacia','Freljord','Ionia','Ixtal',
-  'Noxus','Piltover','Shadow Isles','Shurima','Targon','Void','Zaun',
-];
+/* Region filters (source of truth provided by user) */
+const REGION_CHAMPION_NAMES: Record<string, string[]> = {
+  'Bandle City': ['Fizz', 'Gnar', 'Heimerdinger', 'Kled', 'Corki', 'Lulu', 'Poppy', 'Rumble', 'Teemo', 'Tristana', 'Veigar', 'Vex', 'Yuumi', 'Ziggs'],
+  Bilgewater: ['Fizz', 'Gangplank', 'Graves', 'Illaoi', 'Miss Fortune', 'Nautilus', 'Pyke', 'Tahm Kench', 'Twisted Fate'],
+  Noxus: ['Cassiopeia', 'Darius', 'Draven', 'Kled', 'LeBlanc', 'Katarina', 'Riven', 'Sion', 'Swain', 'Talon', 'Vladimir'],
+  Ionia: ['Ahri', 'Akali', 'Irelia', 'Jhin', 'Karma', 'Kennen', 'Lee Sin', 'Lillia', 'Master Yi', 'Sett', 'Shen', 'Syndra', 'Varus', 'Wukong', 'Xayah', 'Yasuo', 'Yone', 'Zed'],
+  Piltover: ['Caitlyn', 'Corki', 'Ezreal', 'Heimerdinger', 'Jayce', 'Orianna', 'Seraphine', 'Vi'],
+  Zaun: ['Blitzcrank', 'Dr. Mundo', 'Ekko', 'Jinx', 'Singed', 'Twitch', 'Urgot', 'Viktor', 'Warwick', 'Zac', 'Zeri'],
+  'Shadow Isles': ['Elise', 'Evelynn', 'Fiddlesticks', 'Hecarim', 'Kalista', 'Karthus', 'Maokai', 'Senna', 'Thresh', 'Viego', 'Yorick'],
+  Shurima: ['Akshan', 'Amumu', 'Azir', 'Nasus', 'Rammus', 'Renekton', 'Sivir', 'Taliyah', 'Xerath'],
+  Freljord: ['Anivia', 'Ashe', 'Braum', 'Lissandra', 'Olaf', 'Ornn', 'Sejuani', 'Trundle', 'Tryndamere', 'Udyr', 'Volibear'],
+  Targon: ['Aphelios', 'Aurelion Sol', 'Diana', 'Leona', 'Pantheon', 'Soraka', 'Taric', 'Zoe'],
+};
 
-/* Harmony challenge names */
-const HARMONY_CHALLENGES = [
-  'Nowhere to Hide','It Has "Ultimate" In the Name!','We Protec',
-  "They Just... Don't... DIE!","Where'd They Go?","We're Good Over Here",
-  'Summoners on the Rift',"Variety's Overrated",'Get Over Here',
-  "It's a Trap!",'I\'m Helping','Hold That Pose',
-];
+const GLOBETROTTER_REGIONS = Object.keys(REGION_CHAMPION_NAMES);
+
+function normalizeChampionName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizeChallengeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/* Harmony filters (source of truth provided by user) */
+const HARMONY_CHAMPION_NAMES: Record<string, string[]> = {
+  'Nowhere to Hide': ['Akshan', 'Ashe', 'Aurelion Sol', 'Bard', 'Briar', 'Caitlyn', 'Draven', 'Ezreal', 'Galio', 'Gangplank', 'Jhin', 'Jinx', "Kai'Sa", 'Karthus', 'Kled', 'Lillia', 'Lux', 'Maokai', 'Mel', 'Nocturne', 'Pantheon', 'Ryze', 'Senna', 'Shen', 'Sion', 'Smolder', 'Soraka', 'Swain', 'Taliyah', 'Twisted Fate', 'Vex', 'Xerath', 'Yunara', 'Ziggs'],
+  'It Has Ultimate In The Name': ['Amumu', 'Anivia', 'Annie', 'Aurelion Sol', 'Aurora', 'Azir', 'Bard', "Bel'Veth", 'Blitzcrank', 'Braum', 'Briar', 'Cassiopeia', 'Corki', 'Diana', 'Draven', 'Ekko', 'Evelynn', 'Ezreal', 'Fiddlesticks', 'Fizz', 'Galio', 'Gangplank', 'Gnar', 'Gragas', 'Graves', 'Hecarim', 'Heimerdinger', 'Hwei', 'Illaoi', 'Janna', 'Jarvan IV', 'Jinx', 'Karthus', 'Katarina', 'Kayle', 'Kennen', 'Leona', 'Lissandra', 'Lux', 'Malphite', 'Maokai', 'Mel', 'Milio', 'Miss Fortune', 'Morgana', 'Nami', 'Neeko', 'Nilah', 'Nunu & Willump', 'Orianna', 'Ornn', 'Pantheon', 'Qiyana', 'Rakan', 'Rammus', 'Rell', 'Renata Glasc', 'Riven', 'Rumble', 'Samira', 'Sejuani', 'Senna', 'Seraphine', 'Sett', 'Skarner', 'Smolder', 'Sona', 'Swain', 'Talon', 'Twitch', "Vel'Koz", 'Viktor', 'Vladimir', 'Volibear', 'Xayah', 'Xin Zhao', 'Yone', 'Yuumi', 'Zac', 'Zeri', 'Ziggs', 'Zyra'],
+  'We Protec': ['Alistar', 'Annie', 'Bard', 'Briar', 'Fiora', 'Galio', 'Hwei', 'Ivern', 'Janna', "K'Sante", 'Karma', 'Kayle', 'Kindred', 'Lee Sin', 'Lulu', 'Lux', 'Milio', 'Morgana', 'Naafiri', 'Nami', 'Nidalee', 'Nilah', 'Orianna', 'Rakan', 'Renata Glasc', 'Senna', 'Seraphine', 'Shen', 'Skarner', 'Sona', 'Soraka', 'Tahm Kench', 'Taric', 'Thresh', 'Yuumi', 'Zilean'],
+  "They Just... Don't... DIE!": ['Akshan', 'Alistar', 'Anivia', 'Bard', "Bel'Veth", 'Braum', 'Ekko', 'Elise', 'Evelynn', 'Fiora', 'Fizz', 'Gwen', 'Jax', "K'Sante", 'Kalista', 'Karthus', 'Kayle', 'Kayn', 'Kindred', 'Kled', "Kog'Maw", 'Lissandra', 'Malzahar', 'Maokai', 'Master Yi', 'Mel', 'Olaf', 'Pantheon', 'Renata Glasc', 'Sion', 'Tahm Kench', 'Taric', 'Tryndamere', 'Vladimir', 'Xin Zhao', 'Yuumi', 'Zac', 'Zed', 'Zilean'],
+  "Where'd They Go?": ['Akali', 'Akshan', 'Evelynn', "Kai'Sa", "Kha'Zix", 'LeBlanc', 'Neeko', 'Nocturne', 'Pyke', 'Qiyana', 'Rengar', 'Senna', 'Shaco', 'Talon', 'Teemo', 'Twitch', 'Vayne', 'Viego', 'Wukong'],
+  "We're Good Over Here": ['Akshan', 'Ashe', 'Aurora', 'Azir', 'Caitlyn', "Cho'Gath", 'Corki', 'Dr. Mundo', 'Ezreal', 'Gangplank', 'Hwei', 'Jayce', 'Jhin', 'Jinx', "Kai'Sa", 'Karma', 'Kled', "Kog'Maw", 'Lux', 'Maokai', 'Mel', 'Milio', 'Nidalee', 'Pantheon', 'Senna', 'Seraphine', 'Shyvana', 'Sivir', 'Smolder', 'Taliyah', 'Twisted Fate', 'Varus', "Vel'Koz", 'Vex', 'Viktor', 'Xayah', 'Xerath', 'Yuumi', 'Zeri', 'Ziggs', 'Zoe'],
+  'Summoners on the Rift': ['Annie', 'Azir', "Bel'Veth", 'Elise', 'Fiddlesticks', 'Heimerdinger', 'Illaoi', 'Ivern', 'Kalista', 'Kindred', 'Lissandra', 'Malzahar', 'Maokai', 'Naafiri', 'Neeko', 'Orianna', 'Shaco', 'Yorick', 'Yunara', 'Zed', 'Zyra'],
+  'Get Over Here': ['Alistar', 'Azir', 'Blitzcrank', 'Darius', 'Gnar', 'Gragas', 'Hecarim', 'Janna', 'Jayce', "K'Sante", 'Kled', 'Lee Sin', 'Maokai', 'Mordekaiser', 'Nautilus', 'Nilah', 'Orianna', 'Poppy', 'Pyke', 'Rell', 'Sett', 'Singed', 'Skarner', 'Swain', 'Tahm Kench', 'Taliyah', 'Thresh', 'Tristana', 'Urgot', 'Vayne', 'Xin Zhao', 'Yone', 'Zac', 'Ziggs'],
+  "It's a Trap!": ['Caitlyn', 'Gangplank', 'Jhin', 'Jinx', 'Maokai', 'Nidalee', 'Shaco', 'Ziggs', 'Zyra'],
+  "I'm Helping": ['Anivia', 'Aurora', 'Azir', 'Irelia', 'Ivern', 'Jarvan IV', 'Ornn', 'Taliyah', 'Trundle', 'Veigar', 'Yorick'],
+  'Hold That Pose': ['Aatrox', 'Alistar', 'Amumu', 'Anivia', 'Bard', 'Blitzcrank', 'Braum', 'Briar', 'Camille', 'Galio', 'Gnar', 'Gragas', 'Hecarim', 'Ivern', 'Janna', 'Jarvan IV', "K'Sante", 'Kled', 'LeBlanc', 'Leona', 'Lissandra', 'Lulu', 'Maokai', 'Morgana', 'Nami', 'Nautilus', 'Neeko', 'Nunu & Willump', 'Ornn', 'Poppy', 'Pyke', 'Qiyana', 'Rakan', 'Rammus', 'Rell', 'Renata Glasc', 'Riven', 'Sejuani', 'Seraphine', 'Sett', 'Shaco', 'Singed', 'Sion', 'Skarner', 'Tahm Kench', 'Thresh', 'Urgot', 'Vi', 'Warwick', 'Xin Zhao', 'Yasuo', 'Yone', 'Zac', 'Zyra'],
+  "Variety's Overrated Assassin": ['Ahri', 'Akali', 'Akshan', 'Ambessa', 'Aurora', 'Briar', 'Camille', 'Diana', 'Ekko', 'Elise', 'Evelynn', 'Fiora', 'Fizz', 'Irelia', 'Kassadin', 'Katarina', 'Kayn', "Kha'Zix", 'LeBlanc', 'Lee Sin', 'Lucian', 'Master Yi', 'Naafiri', 'Nidalee', 'Nilah', 'Nocturne', 'Pantheon', 'Pyke', 'Qiyana', 'Quinn', 'Rengar', 'Riven', 'Samira', 'Shaco', 'Sylas', 'Talon', 'Tristana', 'Tryndamere', 'Twitch', 'Vayne', 'Vi', 'Viego', 'Yasuo', 'Yone', 'Zaahen', 'Zed'],
+  "Variety's Overrated Fighter": ['Aatrox', 'Ambessa', "Bel'Veth", 'Briar', 'Camille', 'Darius', 'Diana', 'Dr. Mundo', 'Fiora', 'Fizz', 'Gangplank', 'Garen', 'Gnar', 'Gragas', 'Gwen', 'Hecarim', 'Illaoi', 'Irelia', 'Jarvan IV', 'Jax', 'Jayce', 'Kayn', 'Kled', "K'Sante", 'Lee Sin', 'Lillia', 'Master Yi', 'Mordekaiser', 'Naafiri', 'Nasus', 'Nilah', 'Nocturne', 'Olaf', 'Pantheon', 'Poppy', "Rek'Sai", 'Renekton', 'Rengar', 'Riven', 'Rumble', 'Sett', 'Shyvana', 'Sion', 'Skarner', 'Trundle', 'Tryndamere', 'Udyr', 'Urgot', 'Vi', 'Viego', 'Vladimir', 'Volibear', 'Warwick', 'Wukong', 'Xin Zhao', 'Yasuo', 'Yone', 'Yorick', 'Zaahen', 'Zac'],
+  "Variety's Overrated Mage": ['Ahri', 'Anivia', 'Annie', 'Aurelion Sol', 'Aurora', 'Azir', 'Bard', 'Brand', 'Cassiopeia', "Cho'Gath", 'Corki', 'Ekko', 'Elise', 'Evelynn', 'Ezreal', 'Fiddlesticks', 'Galio', 'Gragas', 'Heimerdinger', 'Hwei', 'Ivern', 'Janna', 'Jhin', "Kai'Sa", 'Karma', 'Karthus', 'Kassadin', 'Katarina', 'Kayle', 'Kennen', "Kog'Maw", 'LeBlanc', 'Lillia', 'Lissandra', 'Lulu', 'Lux', 'Malphite', 'Malzahar', 'Mel', 'Milio', 'Miss Fortune', 'Mordekaiser', 'Morgana', 'Nami', 'Neeko', 'Nidalee', 'Nunu & Willump', 'Orianna', 'Renata Glasc', 'Rumble', 'Ryze', 'Seraphine', 'Shyvana', 'Singed', 'Smolder', 'Sona', 'Soraka', 'Swain', 'Sylas', 'Syndra', 'Taliyah', 'Teemo', 'Twisted Fate', 'Varus', 'Veigar', "Vel'Koz", 'Vex', 'Viktor', 'Vladimir', 'Xerath', 'Yuumi', 'Ziggs', 'Zilean', 'Zoe', 'Zyra'],
+  "Variety's Overrated Marksman": ['Akshan', 'Aphelios', 'Ashe', 'Azir', 'Caitlyn', 'Corki', 'Draven', 'Ezreal', 'Graves', 'Jayce', 'Jhin', 'Jinx', "Kai'Sa", 'Kalista', 'Kayle', 'Kindred', "Kog'Maw", 'Lucian', 'Miss Fortune', 'Quinn', 'Samira', 'Senna', 'Sivir', 'Smolder', 'Teemo', 'Tristana', 'Twisted Fate', 'Twitch', 'Varus', 'Vayne', 'Xayah', 'Yunara', 'Zeri'],
+  "Variety's Overrated Support": ['Alistar', 'Amumu', 'Annie', 'Ashe', 'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Fiddlesticks', 'Heimerdinger', 'Hwei', 'Ivern', 'Janna', 'Karma', 'Leona', 'Lulu', 'Lux', 'Maokai', 'Mel', 'Milio', 'Morgana', 'Nami', 'Nautilus', 'Neeko', 'Orianna', 'Pyke', 'Rakan', 'Rell', 'Renata Glasc', 'Senna', 'Seraphine', 'Sona', 'Soraka', 'Swain', 'Tahm Kench', 'Taliyah', 'Taric', 'Thresh', "Vel'Koz", 'Xerath', 'Yuumi', 'Zilean', 'Zyra'],
+  "Variety's Overrated Tank": ['Alistar', 'Amumu', 'Blitzcrank', 'Braum', "Cho'Gath", 'Darius', 'Dr. Mundo', 'Galio', 'Garen', 'Gnar', 'Hecarim', 'Illaoi', 'Jarvan IV', "K'Sante", 'Leona', 'Malphite', 'Maokai', 'Nasus', 'Nautilus', 'Nunu & Willump', 'Olaf', 'Ornn', 'Poppy', 'Rammus', "Rek'Sai", 'Rell', 'Renekton', 'Sejuani', 'Sett', 'Shen', 'Singed', 'Sion', 'Skarner', 'Tahm Kench', 'Taric', 'Thresh', 'Trundle', 'Udyr', 'Urgot', 'Volibear', 'Warwick', 'Wukong', 'Xin Zhao', 'Yorick', 'Zac'],
+};
+
+const HARMONY_CHALLENGES = Object.keys(HARMONY_CHAMPION_NAMES);
 
 const TIER_C: Record<string, string> = {
   IRON: '#6B6B6B', BRONZE: '#CD7F32', SILVER: '#C0C8D4', GOLD: '#C89B3C',
@@ -65,11 +98,11 @@ export default function Teams() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    loadChampionNames();
     Promise.all([
+      loadChampionNames(),
       getChampionMasteries(),
       getChallenges(),
-    ]).then(([m, c]) => {
+    ]).then(([, m, c]) => {
       if (Array.isArray(m)) {
         setMasteries(m.sort((a: any, b: any) => (b.championPoints ?? 0) - (a.championPoints ?? 0)));
       }
@@ -78,20 +111,47 @@ export default function Teams() {
     });
   }, []);
 
-  // Build challenge to champion map
-  const challengeToChampions = useMemo(() => {
-    const map: Record<string, Set<number>> = {};
-    
-    for (const challenge of challenges) {
-      const name = challenge.name ?? challenge.description ?? '';
-      const completedIds = challenge.completedIds ?? [];
-      if (Array.isArray(completedIds) && completedIds.length > 0) {
-        map[name] = new Set(completedIds);
+  const regionToChampionIds = useMemo(() => {
+    const byNormName = new Map<string, number>();
+    for (const m of masteries) {
+      const name = getChampionName(m.championId);
+      if (name && !name.startsWith('#') && !name.startsWith('Champion #')) {
+        byNormName.set(normalizeChampionName(name), m.championId);
       }
     }
-    
+
+    const map: Record<string, Set<number>> = {};
+    for (const [region, names] of Object.entries(REGION_CHAMPION_NAMES)) {
+      map[region] = new Set(
+        names
+          .map((name) => byNormName.get(normalizeChampionName(name)))
+          .filter((id): id is number => typeof id === 'number')
+      );
+    }
+
     return map;
-  }, [challenges]);
+  }, [masteries]);
+
+  const harmonyToChampionIds = useMemo(() => {
+    const byNormName = new Map<string, number>();
+    for (const m of masteries) {
+      const name = getChampionName(m.championId);
+      if (name && !name.startsWith('#') && !name.startsWith('Champion #')) {
+        byNormName.set(normalizeChampionName(name), m.championId);
+      }
+    }
+
+    const map: Record<string, Set<number>> = {};
+    for (const [challengeName, names] of Object.entries(HARMONY_CHAMPION_NAMES)) {
+      map[challengeName] = new Set(
+        names
+          .map((name) => byNormName.get(normalizeChampionName(name)))
+          .filter((id): id is number => typeof id === 'number')
+      );
+    }
+
+    return map;
+  }, [masteries]);
 
   // Find challenge tokens
   const challengeTokens = useMemo(() => {
@@ -99,8 +159,8 @@ export default function Teams() {
     
     for (const challenge of challenges) {
       const name = challenge.name ?? challenge.description ?? '';
-      if (HARMONY_CHALLENGES.includes(name) || GLOBETROTTER_REGIONS.includes(name)) {
-        tokens[name] = {
+      if (HARMONY_CHALLENGES.some(h => normalizeChallengeName(h) === normalizeChallengeName(name)) || GLOBETROTTER_REGIONS.includes(name)) {
+        tokens[normalizeChallengeName(name)] = {
           id: challenge.id ?? 0,
           name,
           currentLevel: challenge.currentLevel ?? challenge.level ?? 'NONE',
@@ -122,7 +182,7 @@ export default function Teams() {
 
     // If region selected, start with that
     if (selectedRegion) {
-      const regionChamps = challengeToChampions[selectedRegion];
+      const regionChamps = regionToChampionIds[selectedRegion];
       if (regionChamps) {
         result = new Set(regionChamps);
       } else {
@@ -133,7 +193,7 @@ export default function Teams() {
     // Intersect with harmony challenges
     if (selectedHarmony.size > 0) {
       for (const harmonyName of selectedHarmony) {
-        const harmonyChamps = challengeToChampions[harmonyName];
+        const harmonyChamps = harmonyToChampionIds[harmonyName];
         if (harmonyChamps) {
           if (result === null) {
             result = new Set(harmonyChamps);
@@ -146,7 +206,7 @@ export default function Teams() {
     }
 
     return result ?? new Set();
-  }, [selectedRegion, selectedHarmony, challengeToChampions, masteries]);
+  }, [selectedRegion, selectedHarmony, masteries, regionToChampionIds, harmonyToChampionIds]);
 
   const toggleHarmony = (name: string) => {
     const next = new Set(selectedHarmony);
@@ -174,6 +234,16 @@ export default function Teams() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const displayedMasteries = useMemo(() => {
+    // Keep original mastery order, but surface filtered picks first for faster scanning.
+    if (!selectedRegion && selectedHarmony.size === 0) return masteries;
+    return [...masteries].sort((a, b) => {
+      const aLit = filteredChampions.has(a.championId) ? 1 : 0;
+      const bLit = filteredChampions.has(b.championId) ? 1 : 0;
+      return bLit - aLit;
+    });
+  }, [masteries, filteredChampions, selectedRegion, selectedHarmony]);
+
   return (
     <div className="p-6 animate-slide-up flex gap-5 h-[calc(100vh-80px)]">
       {/* Left: Champion grid */}
@@ -192,7 +262,7 @@ export default function Teams() {
             </div>
           ) : (
             <div className="grid grid-cols-10 gap-1.5">
-              {masteries.map((m: any) => {
+              {displayedMasteries.map((m: any) => {
                 const lvl = m.championLevel ?? 0;
                 const isLit = filteredChampions.has(m.championId);
                 const color = M_COLOR[Math.min(lvl, 10)] ?? '#5B5A56';
@@ -283,7 +353,7 @@ export default function Teams() {
           <p className="text-[10px] text-ink-ghost mb-3">Select multiple challenges</p>
           <div className="space-y-1.5">
             {HARMONY_CHALLENGES.map((name) => {
-              const token = challengeTokens[name];
+              const token = challengeTokens[normalizeChallengeName(name)];
               const tier = token?.currentLevel ?? 'NONE';
               const color = TIER_C[tier] ?? '#5B5A56';
               const isSelected = selectedHarmony.has(name);

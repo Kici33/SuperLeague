@@ -33,6 +33,42 @@ const TIER_C: Record<string, string> = {
   GRANDMASTER: '#E84057', CHALLENGER: '#F4C874',
 };
 
+const TIER_ALIASES: Record<string, keyof typeof TIER_C> = {
+  I: 'IRON',
+  B: 'BRONZE',
+  S: 'SILVER',
+  G: 'GOLD',
+  P: 'PLATINUM',
+  E: 'EMERALD',
+  D: 'DIAMOND',
+  M: 'MASTER',
+  GM: 'GRANDMASTER',
+  C: 'CHALLENGER',
+};
+
+function normalizeTier(tier: unknown): keyof typeof TIER_C {
+  const raw = String(tier ?? 'IRON').trim().toUpperCase();
+  return TIER_ALIASES[raw] ?? (raw as keyof typeof TIER_C);
+}
+
+function RankCrest({ tier }: { tier: string }) {
+  const normalized = normalizeTier(tier);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <span className="text-[10px] font-bold">{normalized.charAt(0)}</span>;
+  }
+
+  return (
+    <img
+      src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/${normalized.toLowerCase()}.png`}
+      alt={normalized}
+      className="w-7 h-7 object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function tierLabel(tier: string, div: string, lp: number) {
   const t = tier.charAt(0) + tier.slice(1).toLowerCase();
   if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier)) return `${t} ${lp} LP`;
@@ -44,6 +80,7 @@ export default function App() {
   const { connected, summoner, loading, refresh } = useLcu();
   const [copied, setCopied] = useState(false);
   const [soloRank, setSoloRank] = useState<any>(null);
+  const [flexRank, setFlexRank] = useState<any>(null);
 
   // Fetch ranked for sidebar
   useEffect(() => {
@@ -52,7 +89,11 @@ export default function App() {
       const queues = r?.queues ?? [];
       if (Array.isArray(queues)) {
         const sq = queues.find((q: any) => q.queueType === 'RANKED_SOLO_5x5');
+        const fq = queues.find((q: any) => q.queueType === 'RANKED_FLEX_SR');
         if (sq?.tier && sq.tier !== 'NONE') setSoloRank(sq);
+        else setSoloRank(null);
+        if (fq?.tier && fq.tier !== 'NONE') setFlexRank(fq);
+        else setFlexRank(null);
       }
     });
   }, [connected]);
@@ -150,17 +191,50 @@ export default function App() {
                   <p className="text-[10px] text-ink-ghost">Level {summoner.summonerLevel}</p>
                 </div>
               </div>
-              {/* Rank badge */}
-              {soloRank && (
-                <div className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded"
-                  style={{ background: `${TIER_C[soloRank.tier] ?? '#5B5A56'}10`, border: `1px solid ${TIER_C[soloRank.tier] ?? '#5B5A56'}25` }}>
-                  <div className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold flex-shrink-0"
-                    style={{ background: `${TIER_C[soloRank.tier]}25`, color: TIER_C[soloRank.tier] }}>
-                    {soloRank.tier.charAt(0)}
-                  </div>
-                  <span className="text-[10px] font-medium truncate" style={{ color: TIER_C[soloRank.tier] }}>
-                    {tierLabel(soloRank.tier, soloRank.division ?? '', soloRank.leaguePoints ?? 0)}
-                  </span>
+              {/* Rank badges */}
+              {(soloRank || flexRank) && (
+                <div className="space-y-1.5 mt-2">
+                  {soloRank && (() => {
+                    const tier = normalizeTier(soloRank.tier);
+                    const total = (soloRank.wins ?? 0) + (soloRank.losses ?? 0);
+                    const wr = total > 0 ? Math.round(((soloRank.wins ?? 0) / total) * 100) : 0;
+                    return (
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded"
+                        style={{ background: `${TIER_C[tier] ?? '#5B5A56'}10`, border: `1px solid ${TIER_C[tier] ?? '#5B5A56'}25` }}>
+                        <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${TIER_C[tier]}25`, color: TIER_C[tier] }}>
+                          <RankCrest tier={tier} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[9px] uppercase tracking-wider text-ink-ghost">Solo/Duo</p>
+                          <p className="text-[10px] font-medium truncate" style={{ color: TIER_C[tier] }}>
+                            {tierLabel(tier, soloRank.division ?? '', soloRank.leaguePoints ?? 0)} · {wr}% WR
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {flexRank && (() => {
+                    const tier = normalizeTier(flexRank.tier);
+                    const total = (flexRank.wins ?? 0) + (flexRank.losses ?? 0);
+                    const wr = total > 0 ? Math.round(((flexRank.wins ?? 0) / total) * 100) : 0;
+                    return (
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded"
+                        style={{ background: `${TIER_C[tier] ?? '#5B5A56'}10`, border: `1px solid ${TIER_C[tier] ?? '#5B5A56'}25` }}>
+                        <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${TIER_C[tier]}25`, color: TIER_C[tier] }}>
+                          <RankCrest tier={tier} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[9px] uppercase tracking-wider text-ink-ghost">Flex</p>
+                          <p className="text-[10px] font-medium truncate" style={{ color: TIER_C[tier] }}>
+                            {tierLabel(tier, flexRank.division ?? '', flexRank.leaguePoints ?? 0)} · {wr}% WR
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

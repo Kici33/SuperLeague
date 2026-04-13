@@ -50,23 +50,60 @@ const TIER_ICON: Record<string, { bg: string; border: string; text: string }> = 
   CHALLENGER:  { bg: '#F4C87412', border: '#F4C87430', text: '#F4C874' },
 };
 
+const TIER_ALIASES: Record<string, keyof typeof TIER_ICON> = {
+  I: 'IRON',
+  B: 'BRONZE',
+  S: 'SILVER',
+  G: 'GOLD',
+  P: 'PLATINUM',
+  E: 'EMERALD',
+  D: 'DIAMOND',
+  M: 'MASTER',
+  GM: 'GRANDMASTER',
+  C: 'CHALLENGER',
+};
+
+function normalizeTier(tier: unknown): keyof typeof TIER_ICON {
+  const raw = String(tier ?? 'IRON').trim().toUpperCase();
+  return TIER_ALIASES[raw] ?? (raw as keyof typeof TIER_ICON);
+}
+
+function RankedEmblem({ tier }: { tier: string }) {
+  const normalized = normalizeTier(tier);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <span>{normalized.charAt(0)}</span>;
+  }
+
+  return (
+    <img
+      src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/${normalized.toLowerCase()}.png`}
+      alt={normalized}
+      className="w-12 h-12 object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function RankBadge({ tier, division, lp, wins, losses, queue }: {
   tier: string; division: string; lp: number; wins: number; losses: number; queue: string;
 }) {
-  const style = TIER_ICON[tier] ?? { bg: '#5B5A5615', border: '#5B5A5640', text: '#5B5A56' };
+  const normalizedTier = normalizeTier(tier);
+  const style = TIER_ICON[normalizedTier] ?? { bg: '#5B5A5615', border: '#5B5A5640', text: '#5B5A56' };
   const total = wins + losses;
   const wr = total > 0 ? Math.round((wins / total) * 100) : 0;
 
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: style.bg, border: `1px solid ${style.border}` }}>
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
+      <div className="w-16 h-16 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
         style={{ background: `${style.text}20`, color: style.text }}>
-        {tier.charAt(0)}
+        <RankedEmblem tier={normalizedTier} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] text-ink-ghost uppercase tracking-wider">{queue}</p>
         <p className="text-sm font-semibold" style={{ color: style.text }}>
-          {tier.charAt(0) + tier.slice(1).toLowerCase()} {division}
+          {normalizedTier.charAt(0) + normalizedTier.slice(1).toLowerCase()} {division}
         </p>
         <p className="text-xs text-ink-dim tabular-nums">{lp} LP · {wins}W {losses}L · {wr}% WR</p>
       </div>
