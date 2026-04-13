@@ -187,7 +187,7 @@ pub async fn lcu_direct_request(method: &str, endpoint: &str, body: &Value) -> R
     }
 }
 
-/// Generic LCU request — reqwest for GET, irelia for mutations
+/// Generic LCU request that delegates all HTTP methods to `lcu_direct_request`.
 pub async fn lcu_raw(method: &str, endpoint: &str, body: &Value) -> Result<Value, String> {
     lcu_direct_request(method, endpoint, body).await
 }
