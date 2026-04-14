@@ -149,26 +149,26 @@ type BuildTemplate = {
 };
 
 const BUILD_TEMPLATES: BuildTemplate[] = [
-  { name: 'AD Carry', role: 'Marksman', note: 'Crit and attack speed', startingItems: [1055, 2003], coreItems: [3006, 3031, 6672, 3095], situationalItems: [3036, 3085, 3153, 3124] },
-  { name: 'AP Carry', role: 'Mage', note: 'Burst and scaling damage', startingItems: [1056, 2003], coreItems: [3020, 6656, 3089, 4645], situationalItems: [3135, 3157, 3158, 3165] },
-  { name: 'Tank', role: 'Tank', note: 'Front line and soak', startingItems: [1054, 2003], coreItems: [3068, 3009, 3075, 6664], situationalItems: [3065, 3110, 3193, 3742] },
-  { name: 'Bruiser', role: 'Fighter', note: 'Sustained skirmish', startingItems: [1055, 2031], coreItems: [3078, 6630, 3053, 3044], situationalItems: [3748, 3074, 6333, 3071] },
-  { name: 'Assassin', role: 'Assassin', note: 'Pick tools and lethality', startingItems: [1036, 3340], coreItems: [6692, 3142, 3071, 3814], situationalItems: [3158, 3147, 6693, 3147] },
-  { name: 'Support', role: 'Support', note: 'Utility and team enablement', startingItems: [3850, 2003], coreItems: [6617, 6616, 3190, 2065], situationalItems: [3107, 3050, 4005, 6610] },
-  { name: 'On-Hit', role: 'Marksman', note: 'Mixed damage and shred', startingItems: [1055, 2003], coreItems: [3153, 3124, 6672, 3085], situationalItems: [3036, 3031, 3115, 6671] },
-  { name: 'Lethality', role: 'Assassin', note: 'Armor pen and burst', startingItems: [1036, 3340], coreItems: [6692, 3142, 3071, 3814], situationalItems: [3147, 3179, 3158, 6693] },
-  { name: 'Full Crit', role: 'Marksman', note: 'High DPS crit spike', startingItems: [1055, 3340], coreItems: [6671, 3031, 3006, 6675], situationalItems: [3036, 3085, 3124, 3072] },
-  { name: 'Hybrid', role: 'Mage', note: 'Flexible damage and utility', startingItems: [1056, 2003], coreItems: [3115, 3089, 3157, 3135], situationalItems: [4629, 4645, 6656, 3742] },
-  { name: 'Poke Mage', role: 'Mage', note: 'Long range poke and haste', startingItems: [1056, 2003], coreItems: [6655, 3020, 4645, 4629], situationalItems: [3135, 3157, 3089, 3102] },
-  { name: 'Drain Mage', role: 'Mage', note: 'Sustain and extended fights', startingItems: [1056, 2003], coreItems: [6653, 3157, 4637, 4645], situationalItems: [3135, 4628, 3020, 3165] },
-  { name: 'Split Fighter', role: 'Fighter', note: 'Side lane pressure', startingItems: [1055, 2003], coreItems: [6632, 3071, 3047, 3053], situationalItems: [3074, 6333, 3748, 3053] },
-  { name: 'Warden Tank', role: 'Tank', note: 'Peel and engage', startingItems: [1054, 2003], coreItems: [3111, 3068, 3193, 3109], situationalItems: [3075, 3065, 4401, 3009] },
-  { name: 'Enchanter Utility', role: 'Support', note: 'Shields and haste utility', startingItems: [3850, 2003], coreItems: [6616, 6617, 3107, 3504], situationalItems: [4005, 3222, 2065, 3158] },
-  { name: 'Engage Support', role: 'Support', note: 'Initiation and lockdown', startingItems: [3867, 2003], coreItems: [3190, 3117, 3109, 3050], situationalItems: [3107, 3009, 3110, 4401] },
-  { name: 'Duelist Carry', role: 'Fighter', note: 'Skirmish and snowball', startingItems: [1055, 2003], coreItems: [6673, 3044, 3071, 3153], situationalItems: [3124, 3026, 3053, 3074] },
-  { name: 'Ability Marksman', role: 'Marksman', note: 'Caster marksman setup', startingItems: [1055, 2003], coreItems: [3508, 3006, 6694, 6676], situationalItems: [3036, 3814, 3031, 3158] },
-  { name: 'Frontline Bruiser', role: 'Fighter', note: 'Durable dive build', startingItems: [1054, 2003], coreItems: [3067, 3047, 3071, 3053], situationalItems: [3075, 3748, 6333, 4401] },
-  { name: 'Anti-Heal Core', role: 'Marksman', note: 'Punish sustain-heavy teams', startingItems: [1055, 2003], coreItems: [6672, 3006, 3031, 3035], situationalItems: [3124, 3036, 3095, 3072] },
+  { name: 'AD Carry', role: 'Marksman', note: 'Crit and attack speed', startingItems: [1055, 2003], coreItems: [3006, 3031, 6672, 3095, 3036, 3085], situationalItems: [3153, 3124] },
+  { name: 'AP Carry', role: 'Mage', note: 'Burst and scaling damage', startingItems: [1056, 2003], coreItems: [3020, 6656, 3089, 4645, 3135, 3157], situationalItems: [3158, 3165] },
+  { name: 'Tank', role: 'Tank', note: 'Front line and soak', startingItems: [1054, 2003], coreItems: [3047, 3068, 3009, 3075, 6664, 3065], situationalItems: [3110, 3193] },
+  { name: 'Bruiser', role: 'Fighter', note: 'Sustained skirmish', startingItems: [1055, 2031], coreItems: [3111, 3078, 6630, 3053, 3044, 3748], situationalItems: [3074, 6333] },
+  { name: 'Assassin', role: 'Assassin', note: 'Pick tools and lethality', startingItems: [1036, 3340], coreItems: [3009, 6692, 3142, 3071, 3814, 3158], situationalItems: [3147, 6693] },
+  { name: 'Support', role: 'Support', note: 'Utility and team enablement', startingItems: [3850, 2003], coreItems: [3117, 6617, 6616, 3190, 3222, 3107], situationalItems: [3050, 4005] },
+  { name: 'On-Hit', role: 'Marksman', note: 'Mixed damage and shred', startingItems: [1055, 2003], coreItems: [3020, 3153, 3124, 6672, 3085, 3036], situationalItems: [3031, 3115] },
+  { name: 'Lethality', role: 'Assassin', note: 'Armor pen and burst', startingItems: [1036, 3340], coreItems: [3009, 6692, 3142, 3071, 3814, 3147], situationalItems: [3179, 3158] },
+  { name: 'Full Crit', role: 'Marksman', note: 'High DPS crit spike', startingItems: [1055, 3340], coreItems: [3020, 6671, 3031, 3006, 6675, 3036], situationalItems: [3085, 3124] },
+  { name: 'Hybrid', role: 'Mage', note: 'Flexible damage and utility', startingItems: [1056, 2003], coreItems: [3047, 3115, 3089, 3157, 3135, 4629], situationalItems: [4645, 6656] },
+  { name: 'Poke Mage', role: 'Mage', note: 'Long range poke and haste', startingItems: [1056, 2003], coreItems: [3020, 6655, 4645, 4629, 3135, 3157], situationalItems: [3089, 3102] },
+  { name: 'Drain Mage', role: 'Mage', note: 'Sustain and extended fights', startingItems: [1056, 2003], coreItems: [3047, 6653, 3157, 4637, 4645, 3135], situationalItems: [4628, 3020] },
+  { name: 'Split Fighter', role: 'Fighter', note: 'Side lane pressure', startingItems: [1055, 2003], coreItems: [3111, 6632, 3071, 3053, 3074, 6333], situationalItems: [3748, 3047] },
+  { name: 'Warden Tank', role: 'Tank', note: 'Peel and engage', startingItems: [1054, 2003], coreItems: [3009, 3111, 3068, 3193, 3109, 3075], situationalItems: [3065, 4401] },
+  { name: 'Enchanter Utility', role: 'Support', note: 'Shields and haste utility', startingItems: [3850, 2003], coreItems: [3117, 6616, 6617, 3107, 3504, 4005], situationalItems: [3222, 3050] },
+  { name: 'Engage Support', role: 'Support', note: 'Initiation and lockdown', startingItems: [3867, 2003], coreItems: [3050, 3190, 3117, 3109, 3107, 3009], situationalItems: [3110, 4401] },
+  { name: 'Duelist Carry', role: 'Fighter', note: 'Skirmish and snowball', startingItems: [1055, 2003], coreItems: [3006, 6673, 3044, 3071, 3153, 3124], situationalItems: [3026, 3053] },
+  { name: 'Ability Marksman', role: 'Marksman', note: 'Caster marksman setup', startingItems: [1055, 2003], coreItems: [3006, 3508, 6694, 6676, 3036, 3031], situationalItems: [3814, 3158] },
+  { name: 'Frontline Bruiser', role: 'Fighter', note: 'Durable dive build', startingItems: [1054, 2003], coreItems: [3111, 3083, 3071, 3053, 3075, 3748], situationalItems: [6333, 4401] },
+  { name: 'Anti-Heal Core', role: 'Marksman', note: 'Punish sustain-heavy teams', startingItems: [1055, 2003], coreItems: [3006, 6672, 3031, 3035, 3124, 3036], situationalItems: [3095, 3072] },
 ];
 
 const BOOTS_POOL = [3006, 3020, 3047, 3111, 3009, 3117, 3158];
@@ -212,22 +212,80 @@ function mapPositionToRole(value: string | undefined): PlayerRole {
   return 'UNKNOWN';
 }
 
-function buildAdcLegendaryPath(): BuildTemplate {
-  const boot = pickOne(BOOTS_POOL);
-  const legendaryAdcPool = [
-    ...LEGENDARY_POOLS.AD.filter((id) => !BOOTS_POOL.includes(id)),
-    3031, 3036, 3072, 3085, 3094, 3124, 3153, 6671, 6672, 6673, 6675, 6676,
+// Starting items based on role
+function getStartingItemsForRole(role: PlayerRole): number[] {
+  // Jungle: jungle pet + optional potions
+  if (role === 'JUNGLE') {
+    const junglePets = [1101, 1102, 1103]; // Green, Red, Blue jungle pets
+    const pet = pickOne(junglePets);
+    const potionOptions = [2003, 2031, 2055, 0]; // Health potion, refillable, control ward, or no potion
+    const potion = pickOne(potionOptions);
+    return potion > 0 ? [pet, potion] : [pet];
+  }
+
+  // Support: support item + potions/control ward
+  if (role === 'SUPPORT') {
+    const supportItems = [3850, 3867]; // Various support items
+    const support = pickOne(supportItems);
+    const potionOptions = [2003, 2031, 2055]; // Health potion, refillable, or control ward
+    const second = pickOne(potionOptions);
+    return [support, second];
+  }
+
+  // Other roles: random from predefined starters
+  const otherStarters = [
+    [3006], // Cull
+    [3340], // Dark Seal
+    [1055, 2003], // Doran's Blade + potion
+    [1056, 2003], // Doran's Ring + potion
+    [1054, 2003], // Doran's Shield + potion
+    [3070, 2003], // Tear of the Goddess + potion
+    [3006, 2003, 2003], // Cull + 2 pots (representing "Boots and 4 pots" but starter version)
+    [3006, 2031], // Cull + refillable
+    [3045], // Component (represents Random component to 500g)
   ];
-  const sixLegendaries = pickManyUnique(legendaryAdcPool, 6);
+  return pickOne(otherStarters);
+}
+
+function buildLegendaryPath(role: PlayerRole, isAdcRole: boolean, archetype?: ChaosArchetype): BuildTemplate {
+  // Determine legendary pool based on archetype or role
+  let legendaryPool: number[];
+  if (archetype && archetype !== 'ANY') {
+    legendaryPool = LEGENDARY_POOLS[archetype];
+  } else if (archetype === 'ANY' || !archetype) {
+    legendaryPool = [
+      ...LEGENDARY_POOLS.AP,
+      ...LEGENDARY_POOLS.AD,
+      ...LEGENDARY_POOLS.TANK,
+      ...LEGENDARY_POOLS.ASSASSIN,
+    ];
+  } else {
+    legendaryPool = LEGENDARY_POOLS.AD; // Default fallback
+  }
+
+  // Pick boots first - ensure no boots in legendary pool
+  const boot = pickOne(BOOTS_POOL);
+  const bootFilteredPool = legendaryPool.filter((id) => !BOOTS_POOL.includes(id));
+  
+  // Pick the correct number of legendaries: 5 for non-ADC, 6 for ADC
+  const itemCount = isAdcRole ? 6 : 5;
+  const legendaries = pickManyUnique(bootFilteredPool, itemCount);
+
+  // Build starting items based on role
+  const startingItems = getStartingItemsForRole(role);
 
   return {
-    name: 'ADC Mystery Path',
-    role: 'Marksman',
-    note: '1 boots + 6 legendary items',
-    startingItems: [1055, 2003],
-    coreItems: [boot, ...sixLegendaries],
+    name: isAdcRole ? 'ADC Mystery Path' : 'Mystery Path',
+    role: isAdcRole ? 'Marksman' : 'All-Purpose',
+    note: `Boots rush + ${itemCount} legendary items`,
+    startingItems,
+    coreItems: [boot, ...legendaries],
     situationalItems: [],
   };
+}
+
+function buildAdcLegendaryPath(): BuildTemplate {
+  return buildLegendaryPath('ADC', true);
 }
 
 function randomizeSummonerSpells(role: PlayerRole) {
@@ -356,28 +414,8 @@ export default function Randomizer() {
 
   const runeTreeById = useMemo(() => new Map(RUNE_TREES.map(t => [t.id, t.name])), []);
 
-  const buildChaosTemplate = (archetype: ChaosArchetype): BuildTemplate => {
-    const legendaryPool = archetype === 'ANY'
-      ? [
-          ...LEGENDARY_POOLS.AP,
-          ...LEGENDARY_POOLS.AD,
-          ...LEGENDARY_POOLS.TANK,
-          ...LEGENDARY_POOLS.ASSASSIN,
-        ]
-      : LEGENDARY_POOLS[archetype];
-
-    const boot = pickOne(BOOTS_POOL);
-    const randomCore = pickManyUnique(legendaryPool, 3);
-    const randomSituational = pickManyUnique(legendaryPool.filter((id) => !randomCore.includes(id)), 4);
-
-    return {
-      name: `${archetype} Chaos`,
-      role: archetype === 'ANY' ? 'Wildcard' : archetype,
-      note: 'Boots first, then random legendary items',
-      startingItems: CHAOS_STARTERS[archetype],
-      coreItems: [boot, ...randomCore],
-      situationalItems: randomSituational,
-    };
+  const buildChaosTemplate = (archetype: ChaosArchetype, role: PlayerRole = 'UNKNOWN', isAdc: boolean = false): BuildTemplate => {
+    return buildLegendaryPath(role, isAdc, archetype);
   };
 
   const detectRoleFromChampSelect = async (): Promise<PlayerRole> => {
@@ -486,6 +524,7 @@ export default function Randomizer() {
 
   const rollLoadout = (roleOverride?: PlayerRole, options?: { commit?: boolean }) => {
     const role = roleOverride ?? detectedRole;
+    const isAdc = role === 'ADC';
     const champion = randomizeChampion && eligibleMasteries.length > 0 ? pickOne(eligibleMasteries) : randomChampion;
     const runePage = randomizeRunes ? buildRandomRuneTemplate() : randomRunePage;
     const rolledSpells = randomizeSpells ? randomizeSummonerSpells(role) : randomSpells;
@@ -493,9 +532,9 @@ export default function Randomizer() {
 
     let build = randomizeBuild ? pickOne(BUILD_TEMPLATES) : randomBuild;
     if (randomizeBuild && includeChaosItems) {
-      build = buildChaosTemplate(chaosArchetype);
+      build = buildChaosTemplate(chaosArchetype, role, isAdc);
     }
-    if (randomizeBuild && role === 'ADC') {
+    if (randomizeBuild && isAdc) {
       build = buildAdcLegendaryPath();
     }
 
@@ -1234,7 +1273,7 @@ export default function Randomizer() {
               <>
                 <p className="text-sm font-semibold text-ink-bright truncate">{randomBuild.name}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {randomBuild.coreItems.slice(0, 4).map((id, idx) => (
+                  {randomBuild.coreItems.map((id, idx) => (
                     <img key={`${id}-${idx}`} src={getItemIconUrl(id)} alt="" className="w-7 h-7 rounded-md border border-white/[0.08]" />
                   ))}
                 </div>
