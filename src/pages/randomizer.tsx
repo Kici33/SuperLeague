@@ -198,18 +198,50 @@ function randomizeSummonerSpells(role: PlayerRole) {
   const smite = SUMMONER_SPELLS.find((s) => s.id === 11) ?? SUMMONER_SPELLS[0];
 
   if (role === 'JUNGLE') {
-    // Jungle: always smite, randomize which key
-    return Math.random() < 0.5
-      ? { first: smite, second: flash }
-      : { first: flash, second: smite };
+    // Keep jungle-specific invariant: always include smite.
+    const secondPool = SUMMONER_SPELLS.filter((s) => s.id !== 11);
+    const second = pickOne(secondPool);
+    return { first: smite, second };
   }
 
-  const pool = SUMMONER_SPELLS.filter((s) => s.id !== 4 && s.id !== 11);
-  const other = pickOne(pool);
-  // Non-jungle: both spells randomized, all placements equally likely
-  return Math.random() < 0.5
-    ? { first: flash, second: other }
-    : { first: other, second: flash };
+  // Non-jungle: roll 2 unique spells, flash may or may not be present.
+  const pool = SUMMONER_SPELLS.filter((s) => s.id !== 11);
+  const first = pickOne(pool);
+  const second = pickOne(pool.filter((s) => s.id !== first.id));
+  return { first, second };
+}
+
+function placeSpellsByFlashPreference(
+  spells: { first: { id: number; name: string }; second: { id: number; name: string } } | null,
+  flashPreference: 'D' | 'F',
+) {
+  if (!spells) return null;
+
+  const dSlot = flashPreference;
+  const fSlot = flashPreference === 'D' ? 'F' : 'D';
+  const pair = [spells.first, spells.second];
+  const flash = pair.find((s) => s.id === 4);
+
+  // If flash is rolled, lock flash to preferred slot.
+  if (flash) {
+    const other = pair.find((s) => s.id !== flash.id) ?? flash;
+    return dSlot === 'D'
+      ? { first: flash, second: other }
+      : { first: other, second: flash };
+  }
+
+  // Otherwise, force key combat spells to the opposite side of flash preference.
+  const priorityOrder = [11, 12, 14, 3, 1, 21, 6, 7];
+  const keySpell = priorityOrder
+    .map((id) => pair.find((s) => s.id === id))
+    .find((s): s is { id: number; name: string } => Boolean(s));
+
+  const opposite = keySpell ?? pair[1];
+  const other = pair.find((s) => s.id !== opposite.id) ?? pair[0];
+
+  return fSlot === 'F'
+    ? { first: other, second: opposite }
+    : { first: opposite, second: other };
 }
 
 function delay(ms: number): Promise<void> {
@@ -226,6 +258,7 @@ export default function Randomizer() {
   const [randomizeBuild, setRandomizeBuild] = useState(true);
   const [includeChaosItems, setIncludeChaosItems] = useState(false);
   const [chaosArchetype, setChaosArchetype] = useState<ChaosArchetype>('ANY');
+  const [flashPosition, setFlashPosition] = useState<'D' | 'F'>('D');
   const [detectedRole, setDetectedRole] = useState<PlayerRole>('UNKNOWN');
   const [autoApplyEnabled, setAutoApplyEnabled] = useState(false);
   const [autoApplying, setAutoApplying] = useState(false);
@@ -408,7 +441,8 @@ export default function Randomizer() {
     const role = roleOverride ?? detectedRole;
     const champion = randomizeChampion && eligibleMasteries.length > 0 ? pickOne(eligibleMasteries) : randomChampion;
     const runePage = randomizeRunes ? buildRandomRuneTemplate() : randomRunePage;
-    const spells = randomizeSpells ? randomizeSummonerSpells(role) : randomSpells;
+    const rolledSpells = randomizeSpells ? randomizeSummonerSpells(role) : randomSpells;
+    const spells = placeSpellsByFlashPreference(rolledSpells, flashPosition);
 
     let build = randomizeBuild ? pickOne(BUILD_TEMPLATES) : randomBuild;
     if (randomizeBuild && includeChaosItems) {
@@ -985,6 +1019,7 @@ export default function Randomizer() {
     randomizeBuild,
     includeChaosItems,
     chaosArchetype,
+    flashPosition,
     eligibleMasteries,
     randomChampion,
     randomRunePage,
@@ -1066,7 +1101,13 @@ export default function Randomizer() {
           </label>
 
           {randomizeSpells && (
-            <p className="text-[11px] text-ink-ghost px-1">Spell key placement is fully random for all roles (including Jungle).</p>
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setFlashPosition('D')} className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${flashPosition === 'D' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' : 'bg-white/[0.03] text-ink-ghost border border-white/[0.07] hover:bg-white/[0.06]'}`}>Flash Preference: D</button>
+                <button onClick={() => setFlashPosition('F')} className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${flashPosition === 'F' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' : 'bg-white/[0.03] text-ink-ghost border border-white/[0.07] hover:bg-white/[0.06]'}`}>Flash Preference: F</button>
+              </div>
+              <p className="text-[11px] text-ink-ghost px-1">If Flash is not rolled, key spells (Smite/Teleport/Ignite/Exhaust) are placed opposite your flash preference.</p>
+            </>
           )}
 
           <label className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 cursor-pointer">
@@ -1135,7 +1176,7 @@ export default function Randomizer() {
             {randomSpells ? (
               <>
                 <p className="text-sm font-semibold text-ink-bright truncate">{randomSpells.first.name} / {randomSpells.second.name}</p>
-                <p className="text-[10px] text-ink-ghost">Keys are randomized every roll</p>
+                <p className="text-[10px] text-ink-ghost">Flash pref {flashPosition} · key spell opposite</p>
               </>
             ) : <p className="text-sm text-ink-dim">Not rolled</p>}
           </div>
