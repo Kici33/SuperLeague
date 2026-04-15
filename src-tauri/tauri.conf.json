@@ -1,6 +1,6 @@
 {
   "productName": "super-league",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.superleague.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +12,7 @@
     "windows": [
       {
         "title": "super-league",
-        "width": 1060,
+        "width": 1080,
         "height": 960
       }
     ],
