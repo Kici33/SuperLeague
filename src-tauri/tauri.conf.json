@@ -1,7 +1,6 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
   "productName": "super-league",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.superleague.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,7 +12,7 @@
     "windows": [
       {
         "title": "super-league",
-        "width": 1060,
+        "width": 1080,
         "height": 960
       }
     ],
@@ -21,8 +20,17 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRDMDBENEREQjkxMTNDOEUKUldTT1BCRzUzZFFBVEdEZ0JDcjgybGE4YkFrV3Q3NGFhWUZDMHg3aExSUTIxdzVrM1dOTFJPYksK",
+      "endpoints": [
+        "https://github.com/Kici33/SuperLeague/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
