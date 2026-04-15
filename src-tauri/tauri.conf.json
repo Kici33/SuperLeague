@@ -22,7 +22,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRDMDBENEREQjkxMTNDOEUKUldTT1BCRzUzZFFBVEdEZ0JDcjgybGE4YkFrV3Q3NGFhWUZDMHg3aExSUTIxdzVrM1dOTFJPYksK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5RjdDODMzQjYyODEyRjMKUldUekVpaTJNOGozdWFFSnEwUHZFNG9acGRhY2tZUWRXbjhJcHRSNVRPTjZYdkNKcm8wZEVDTnEK",
       "endpoints": [
         "https://github.com/Kici33/SuperLeague/releases/latest/download/latest.json"
       ]
