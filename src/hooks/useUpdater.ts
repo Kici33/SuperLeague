@@ -8,6 +8,23 @@ export type UpdaterState =
   | { status: 'installed'; version: string }
   | { status: 'error'; message: string };
 
+type GitHubRelease = {
+  tag_name: string;
+  prerelease: boolean;
+  draft: boolean;
+};
+
+async function getLatestBetaTag(): Promise<string | null> {
+  const response = await fetch('https://api.github.com/repos/Kici33/SuperLeague/releases?per_page=20');
+  if (!response.ok) {
+    throw new Error(`Failed to fetch releases (${response.status})`);
+  }
+
+  const releases = (await response.json()) as GitHubRelease[];
+  const latestPrerelease = releases.find((release) => release.prerelease && !release.draft);
+  return latestPrerelease?.tag_name ?? null;
+}
+
 export function useUpdater(): UpdaterState {
   const [state, setState] = useState<UpdaterState>({ status: 'checking' });
 
@@ -32,11 +49,18 @@ export function useUpdater(): UpdaterState {
 
     const run = async () => {
       try {
-        const update = await check(
-          channel === 'beta'
-            ? { target: 'beta' }
-            : undefined,
-        );
+        let update;
+        if (channel === 'beta') {
+          const betaTag = await getLatestBetaTag();
+          if (!betaTag) {
+            setState({ status: 'idle' });
+            return;
+          }
+
+          update = await check({ target: betaTag });
+        } else {
+          update = await check();
+        }
 
         if (cancelled) return;
 
