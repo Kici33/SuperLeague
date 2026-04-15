@@ -42,10 +42,39 @@ jobs:
       - name: install frontend dependencies
         run: npm install --no-audit --no-fund
 
+      - name: normalize updater signing key
+        shell: pwsh
+        env:
+          RAW_TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:RAW_TAURI_SIGNING_PRIVATE_KEY)) {
+            throw "TAURI_SIGNING_PRIVATE_KEY secret is empty."
+          }
+
+          $key = $env:RAW_TAURI_SIGNING_PRIVATE_KEY.Trim()
+          if (-not $key.StartsWith("untrusted comment:")) {
+            try {
+              $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($key)).Trim()
+            } catch {
+              throw "TAURI_SIGNING_PRIVATE_KEY is not raw key text and could not be base64-decoded."
+            }
+
+            if (-not $decoded.StartsWith("untrusted comment:")) {
+              throw "Decoded TAURI_SIGNING_PRIVATE_KEY does not contain a valid minisign/rsign comment header."
+            }
+
+            $key = $decoded
+          }
+
+          "TAURI_SIGNING_PRIVATE_KEY<<EOF" >> $env:GITHUB_ENV
+          $key >> $env:GITHUB_ENV
+          "EOF" >> $env:GITHUB_ENV
+
       - uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: .
           tagName: ${{ github.ref_name == 'beta' && 'beta-v__VERSION__' || 'v__VERSION__' }}
