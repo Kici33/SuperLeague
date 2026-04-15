@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   refreshInterval: 6,
   autoConnect: true,
   showNotifications: true,
+  releaseChannel: 'stable',
   theme: 'dark',
   activeAccountId: null,
 };
@@ -131,6 +132,29 @@ export default function SettingsPage() {
                 <p className="text-xs text-ink-ghost">Show system alerts for milestones</p>
               </div>
               <Toggle on={settings.showNotifications} onChange={() => setSettings({ ...settings, showNotifications: !settings.showNotifications })} />
+            </div>
+          </div>
+
+          <div className="card p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-ink-bright">Release Channel</h3>
+            <p className="text-xs text-ink-ghost">
+              Choose which updates to receive. Beta may include unfinished features.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, releaseChannel: 'stable' })}
+                className={`btn-ghost text-sm ${settings.releaseChannel === 'stable' ? 'border-gold/40 text-gold bg-gold/10' : ''}`}
+              >
+                Stable
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, releaseChannel: 'beta' })}
+                className={`btn-ghost text-sm ${settings.releaseChannel === 'beta' ? 'border-gold/40 text-gold bg-gold/10' : ''}`}
+              >
+                Beta
+              </button>
             </div>
           </div>
 

@@ -32,6 +32,24 @@ function toArray(data: any): any[] {
   return [];
 }
 
+function normalizeChampionSpellAssetName(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '');
+}
+
+const championSpellNamesById: Record<number, Record<'Q' | 'W' | 'E', string>> = {};
+
+function cacheChampionSpellNames(championId: number, spellNames: Partial<Record<'Q' | 'W' | 'E', string>>) {
+  const current = championSpellNamesById[championId] ?? { Q: '', W: '', E: '' };
+  championSpellNamesById[championId] = {
+    Q: spellNames.Q ?? current.Q,
+    W: spellNames.W ?? current.W,
+    E: spellNames.E ?? current.E,
+  };
+}
+
 // ── Connection ──
 
 export async function getConnectionStatus(): Promise<ConnectionStatus> {
@@ -240,15 +258,22 @@ export function getItemIconUrl(itemId: number): string {
   return `https://ddragon.leagueoflegends.com/cdn/16.8.1/img/item/${itemId}.png`;
 }
 
-function normalizeChampionSpellAssetName(championName: string): string {
-  return championName
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9]/g, '');
+export function getChampionSpellName(championId: number, spell: 'Q' | 'W' | 'E'): string | null {
+  return championSpellNamesById[championId]?.[spell] ?? null;
 }
 
-export function getChampionSpellMaxOrderIconUrl(championName: string, spell: 'Q' | 'W' | 'E'): string {
-  return `https://ddragon.leagueoflegends.com/cdn/16.8.1/img/spell/${normalizeChampionSpellAssetName(championName)}${spell}.png`;
+export function getChampionSpellMaxOrderIconUrls(
+  championName: string,
+  spell: 'Q' | 'W' | 'E',
+  spellName?: string | null,
+): string[] {
+  const championStem = normalizeChampionSpellAssetName(championName);
+  const candidates = [
+    `${championStem}${spell}`,
+    spellName ? `${championStem}${normalizeChampionSpellAssetName(spellName)}` : null,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return Array.from(new Set(candidates.map((candidate) => `https://ddragon.leagueoflegends.com/cdn/16.8.1/img/spell/${candidate}.png`)));
 }
 
 export function getSkinSplashUrl(championId: number, skinId: number): string {

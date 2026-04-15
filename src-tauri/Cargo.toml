@@ -27,4 +27,6 @@ base64 = "0.22"
 sysinfo = "0.33"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"

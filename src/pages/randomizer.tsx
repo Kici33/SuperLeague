@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Loader2, Package, Play, Shield, Shuffle, Swords, Flame, Lock } from 'lucide-react';
-import { getChampionMasteries, getChampionIconUrl, getChampionSpellMaxOrderIconUrl, getCurrentSummoner, getItemIconUrl, lcuRequest } from '@/lib/lcu-api';
+import { getChampionMasteries, getChampionIconUrl, getChampionSpellMaxOrderIconUrls, getCurrentSummoner, getItemIconUrl, lcuRequest } from '@/lib/lcu-api';
 
 // Champion name lookup from Community Dragon
 let championNames: Record<number, string> = {};
-let championSpellAssetNames: Record<number, string> = {};
+let championSpellAssetNames: Record<number, Partial<Record<'Q' | 'W' | 'E', string>>> = {};
 async function loadChampionNames(): Promise<Record<number, string>> {
   if (Object.keys(championNames).length > 0) return championNames;
   try {
@@ -14,7 +14,6 @@ async function loadChampionNames(): Promise<Record<number, string>> {
       data.forEach((c: any) => {
         if (c.id && c.id !== -1) {
           championNames[c.id] = c.name ?? c.alias ?? `#${c.id}`;
-          championSpellAssetNames[c.id] = c.alias ?? c.name ?? `#${c.id}`;
         }
       });
     }
@@ -33,7 +32,6 @@ async function loadChampionNames(): Promise<Record<number, string>> {
             const id = Number(c?.id);
             if (Number.isFinite(id) && id > 0) {
               championNames[id] = c?.name ?? c?.alias ?? `#${id}`;
-              championSpellAssetNames[id] = c?.alias ?? c?.name ?? `#${id}`;
             }
           });
         }
@@ -50,8 +48,8 @@ function getChampionName(championId: number): string {
   return championNames[championId] ?? `Champion #${championId}`;
 }
 
-function getChampionSpellAssetName(championId: number): string | null {
-  const rawName = championSpellAssetNames[championId];
+function getChampionSpellAssetName(championId: number, spell: SpellKey): string | null {
+  const rawName = championSpellAssetNames[championId]?.[spell];
   if (!rawName) return null;
   const normalized = rawName
     .normalize('NFKD')
@@ -70,6 +68,20 @@ async function loadChampionNameById(championId: number): Promise<string | null> 
       const name = typeof data?.name === 'string' ? data.name : null;
       if (name) {
         championNames[championId] = name;
+        if (Array.isArray(data?.spells)) {
+          championSpellAssetNames[championId] = data.spells
+            .slice(0, 3)
+            .reduce((acc: Partial<Record<'Q' | 'W' | 'E', string>>, spell: any, index: number) => {
+              const key = ['Q', 'W', 'E'][index] as 'Q' | 'W' | 'E';
+              const rawSpellName = typeof spell?.name === 'string'
+                ? spell.name
+                : typeof spell?.id === 'string'
+                  ? spell.id
+                  : '';
+              if (rawSpellName) acc[key] = rawSpellName;
+              return acc;
+            }, { ...(championSpellAssetNames[championId] ?? {}) });
+        }
         return name;
       }
     }
@@ -84,6 +96,20 @@ async function loadChampionNameById(championId: number): Promise<string | null> 
       const name = typeof data?.name === 'string' ? data.name : null;
       if (name) {
         championNames[championId] = name;
+        if (Array.isArray(data?.spells)) {
+          championSpellAssetNames[championId] = data.spells
+            .slice(0, 3)
+            .reduce((acc: Partial<Record<'Q' | 'W' | 'E', string>>, spell: any, index: number) => {
+              const key = ['Q', 'W', 'E'][index] as 'Q' | 'W' | 'E';
+              const rawSpellName = typeof spell?.name === 'string'
+                ? spell.name
+                : typeof spell?.id === 'string'
+                  ? spell.id
+                  : '';
+              if (rawSpellName) acc[key] = rawSpellName;
+              return acc;
+            }, { ...(championSpellAssetNames[championId] ?? {}) });
+        }
         return name;
       }
     }
@@ -392,6 +418,42 @@ function placeSpellsByFlashPreference(
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function SpellMaxOrderIcon({
+  championId,
+  championName,
+  spell,
+}: {
+  championId: number;
+  championName: string;
+  spell: SpellKey;
+}) {
+  const spellName = getChampionSpellAssetName(championId, spell);
+  const urls = useMemo(
+    () => getChampionSpellMaxOrderIconUrls(championName, spell, spellName),
+    [championName, spell, spellName],
+  );
+  const [urlIndex, setUrlIndex] = useState(0);
+
+  useEffect(() => {
+    setUrlIndex(0);
+  }, [championId, championName, spell, spellName]);
+
+  if (urls.length === 0) return null;
+
+  const currentUrl = urls[Math.min(urlIndex, urls.length - 1)];
+
+  return (
+    <img
+      src={currentUrl}
+      alt={`${championName} ${spell}`}
+      className="w-full h-full object-cover"
+      onError={() => {
+        setUrlIndex((index) => Math.min(index + 1, urls.length - 1));
+      }}
+    />
+  );
 }
 
 export default function Randomizer() {
@@ -1167,7 +1229,7 @@ export default function Randomizer() {
   ]);
 
   const selectedChampionName = randomChampion ? getChampionName(randomChampion.championId) : 'No champion rolled';
-  const selectedSpellMaxOrderChampionName = randomChampion ? getChampionSpellAssetName(randomChampion.championId) : null;
+  const selectedSpellMaxOrderChampionName = randomChampion ? getChampionName(randomChampion.championId) : null;
 
   return (
     <div className="p-4 md:p-5 space-y-4 animate-slide-up">
@@ -1306,11 +1368,10 @@ export default function Randomizer() {
                     <div key={`${spell}-${index}`} className="flex items-center gap-2">
                       <div className="flex flex-col items-center gap-1">
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg border border-white/[0.1] bg-black/20 overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
-                          <img
-                            src={getChampionSpellMaxOrderIconUrl(selectedSpellMaxOrderChampionName, spell)}
-                            alt={`${selectedChampionName} ${spell}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.35'; }}
+                          <SpellMaxOrderIcon
+                            championId={randomChampion.championId}
+                            championName={selectedSpellMaxOrderChampionName}
+                            spell={spell}
                           />
                         </div>
                         <span className="text-[10px] font-semibold text-white tracking-wide">{spell}</span>

@@ -37,7 +37,7 @@ SuperLeague is a desktop application that connects directly to your League of Le
 
 ```
 .
-├── src/                    # Frontend TypeScript/React code
+├── src/                   # Frontend TypeScript/React code
 │   ├── App.tsx            # Main application component
 │   ├── pages/             # Page components
 │   ├── hooks/             # Custom React hooks

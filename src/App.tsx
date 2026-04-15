@@ -5,6 +5,7 @@ import {
   RefreshCw, WifiOff, Copy, Check, Shuffle,
 } from 'lucide-react';
 import { useLcu } from './hooks/useLcu';
+import { useUpdater } from './hooks/useUpdater';
 import { pages } from './pages_config';
 import { getRankedStats } from './lib/lcu-api';
 
@@ -78,6 +79,7 @@ function tierLabel(tier: string, div: string, lp: number) {
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const { connected, summoner, loading, refresh } = useLcu();
+  const updater = useUpdater();
   const [copied, setCopied] = useState(false);
   const [soloRank, setSoloRank] = useState<any>(null);
   const [flexRank, setFlexRank] = useState<any>(null);
@@ -249,11 +251,28 @@ export default function App() {
             <h1 className="text-base font-semibold text-ink-bright">{pages[activePage]?.title}</h1>
             <p className="text-xs text-ink-muted">{pages[activePage]?.description}</p>
           </div>
-          {!connected && !loading && (
-            <div className="flex items-center gap-2 text-xs text-ruby bg-ruby/10 border border-ruby/20 px-3 py-1.5 rounded-lg">
-              <WifiOff size={12} /> League client not detected
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {updater.status === 'checking' && (
+              <div className="flex items-center gap-2 text-xs text-ink-ghost bg-white/[0.04] border border-white/[0.06] px-3 py-1.5 rounded-lg">
+                <RefreshCw size={12} className="animate-spin" /> Checking for updates
+              </div>
+            )}
+            {updater.status === 'downloading' && (
+              <div className="flex items-center gap-2 text-xs text-gold bg-gold/10 border border-gold/20 px-3 py-1.5 rounded-lg">
+                <RefreshCw size={12} className="animate-spin" /> Updating to {updater.version}
+              </div>
+            )}
+            {updater.status === 'error' && (
+              <div className="flex items-center gap-2 text-xs text-ruby bg-ruby/10 border border-ruby/20 px-3 py-1.5 rounded-lg">
+                <Bug size={12} /> Update check failed
+              </div>
+            )}
+            {!connected && !loading && (
+              <div className="flex items-center gap-2 text-xs text-ruby bg-ruby/10 border border-ruby/20 px-3 py-1.5 rounded-lg">
+                <WifiOff size={12} /> League client not detected
+              </div>
+            )}
+          </div>
         </header>
         <div className="flex-1 overflow-hidden">
           <div key={activePage} className="h-full overflow-y-auto animate-fade-in">

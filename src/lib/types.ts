@@ -206,6 +206,7 @@ export interface AppSettings {
   refreshInterval: number;
   autoConnect: boolean;
   showNotifications: boolean;
+  releaseChannel: 'stable' | 'beta';
   theme: 'dark';
   activeAccountId: number | null;
 }
