@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Package, Play, Shield, Shuffle, Swords, Flame, Lock } from 'lucide-react';
-import { getChampionMasteries, getChampionIconUrl, getCurrentSummoner, getItemIconUrl, lcuRequest } from '@/lib/lcu-api';
+import { ArrowRight, Loader2, Package, Play, Shield, Shuffle, Swords, Flame, Lock } from 'lucide-react';
+import { getChampionMasteries, getChampionIconUrl, getChampionSpellMaxOrderIconUrl, getCurrentSummoner, getItemIconUrl, lcuRequest } from '@/lib/lcu-api';
 
 // Champion name lookup from Community Dragon
 let championNames: Record<number, string> = {};
+let championSpellAssetNames: Record<number, string> = {};
 async function loadChampionNames(): Promise<Record<number, string>> {
   if (Object.keys(championNames).length > 0) return championNames;
   try {
@@ -11,7 +12,10 @@ async function loadChampionNames(): Promise<Record<number, string>> {
     const data = await res.json();
     if (Array.isArray(data)) {
       data.forEach((c: any) => {
-        if (c.id && c.id !== -1) championNames[c.id] = c.name ?? c.alias ?? `#${c.id}`;
+        if (c.id && c.id !== -1) {
+          championNames[c.id] = c.name ?? c.alias ?? `#${c.id}`;
+          championSpellAssetNames[c.id] = c.alias ?? c.name ?? `#${c.id}`;
+        }
       });
     }
   } catch (e) {
@@ -29,6 +33,7 @@ async function loadChampionNames(): Promise<Record<number, string>> {
             const id = Number(c?.id);
             if (Number.isFinite(id) && id > 0) {
               championNames[id] = c?.name ?? c?.alias ?? `#${id}`;
+              championSpellAssetNames[id] = c?.alias ?? c?.name ?? `#${id}`;
             }
           });
         }
@@ -43,6 +48,16 @@ async function loadChampionNames(): Promise<Record<number, string>> {
 
 function getChampionName(championId: number): string {
   return championNames[championId] ?? `Champion #${championId}`;
+}
+
+function getChampionSpellAssetName(championId: number): string | null {
+  const rawName = championSpellAssetNames[championId];
+  if (!rawName) return null;
+  const normalized = rawName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '');
+  return normalized.length > 0 ? normalized : null;
 }
 
 async function loadChampionNameById(championId: number): Promise<string | null> {
@@ -121,6 +136,8 @@ type RuneTemplate = {
   highlight: string;
 };
 
+type SpellKey = 'Q' | 'W' | 'E';
+
 type PerkStyle = {
   id: number;
   name: string;
@@ -148,58 +165,84 @@ type BuildTemplate = {
   situationalItems: number[];
 };
 
-const BUILD_TEMPLATES: BuildTemplate[] = [
-  { name: 'AD Carry', role: 'Marksman', note: 'Crit and attack speed', startingItems: [1055, 2003], coreItems: [3006, 3031, 6672, 3095, 3036, 3085], situationalItems: [3153, 3124] },
-  { name: 'AP Carry', role: 'Mage', note: 'Burst and scaling damage', startingItems: [1056, 2003], coreItems: [3020, 6656, 3089, 4645, 3135, 3157], situationalItems: [3158, 3165] },
-  { name: 'Tank', role: 'Tank', note: 'Front line and soak', startingItems: [1054, 2003], coreItems: [3047, 3068, 3009, 3075, 6664, 3065], situationalItems: [3110, 3193] },
-  { name: 'Bruiser', role: 'Fighter', note: 'Sustained skirmish', startingItems: [1055, 2031], coreItems: [3111, 3078, 6630, 3053, 3044, 3748], situationalItems: [3074, 6333] },
-  { name: 'Assassin', role: 'Assassin', note: 'Pick tools and lethality', startingItems: [1036, 3340], coreItems: [3009, 6692, 3142, 3071, 3814, 3158], situationalItems: [3147, 6693] },
-  { name: 'Support', role: 'Support', note: 'Utility and team enablement', startingItems: [3850, 2003], coreItems: [3117, 6617, 6616, 3190, 3222, 3107], situationalItems: [3050, 4005] },
-  { name: 'On-Hit', role: 'Marksman', note: 'Mixed damage and shred', startingItems: [1055, 2003], coreItems: [3020, 3153, 3124, 6672, 3085, 3036], situationalItems: [3031, 3115] },
-  { name: 'Lethality', role: 'Assassin', note: 'Armor pen and burst', startingItems: [1036, 3340], coreItems: [3009, 6692, 3142, 3071, 3814, 3147], situationalItems: [3179, 3158] },
-  { name: 'Full Crit', role: 'Marksman', note: 'High DPS crit spike', startingItems: [1055, 3340], coreItems: [3020, 6671, 3031, 3006, 6675, 3036], situationalItems: [3085, 3124] },
-  { name: 'Hybrid', role: 'Mage', note: 'Flexible damage and utility', startingItems: [1056, 2003], coreItems: [3047, 3115, 3089, 3157, 3135, 4629], situationalItems: [4645, 6656] },
-  { name: 'Poke Mage', role: 'Mage', note: 'Long range poke and haste', startingItems: [1056, 2003], coreItems: [3020, 6655, 4645, 4629, 3135, 3157], situationalItems: [3089, 3102] },
-  { name: 'Drain Mage', role: 'Mage', note: 'Sustain and extended fights', startingItems: [1056, 2003], coreItems: [3047, 6653, 3157, 4637, 4645, 3135], situationalItems: [4628, 3020] },
-  { name: 'Split Fighter', role: 'Fighter', note: 'Side lane pressure', startingItems: [1055, 2003], coreItems: [3111, 6632, 3071, 3053, 3074, 6333], situationalItems: [3748, 3047] },
-  { name: 'Warden Tank', role: 'Tank', note: 'Peel and engage', startingItems: [1054, 2003], coreItems: [3009, 3111, 3068, 3193, 3109, 3075], situationalItems: [3065, 4401] },
-  { name: 'Enchanter Utility', role: 'Support', note: 'Shields and haste utility', startingItems: [3850, 2003], coreItems: [3117, 6616, 6617, 3107, 3504, 4005], situationalItems: [3222, 3050] },
-  { name: 'Engage Support', role: 'Support', note: 'Initiation and lockdown', startingItems: [3867, 2003], coreItems: [3050, 3190, 3117, 3109, 3107, 3009], situationalItems: [3110, 4401] },
-  { name: 'Duelist Carry', role: 'Fighter', note: 'Skirmish and snowball', startingItems: [1055, 2003], coreItems: [3006, 6673, 3044, 3071, 3153, 3124], situationalItems: [3026, 3053] },
-  { name: 'Ability Marksman', role: 'Marksman', note: 'Caster marksman setup', startingItems: [1055, 2003], coreItems: [3006, 3508, 6694, 6676, 3036, 3031], situationalItems: [3814, 3158] },
-  { name: 'Frontline Bruiser', role: 'Fighter', note: 'Durable dive build', startingItems: [1054, 2003], coreItems: [3111, 3083, 3071, 3053, 3075, 3748], situationalItems: [6333, 4401] },
-  { name: 'Anti-Heal Core', role: 'Marksman', note: 'Punish sustain-heavy teams', startingItems: [1055, 2003], coreItems: [3006, 6672, 3031, 3035, 3124, 3036], situationalItems: [3095, 3072] },
-];
-
-const BOOTS_POOL = [3006, 3020, 3047, 3111, 3009, 3117, 3158];
+const BOOTS_POOL = [3158, 3047, 3111, 3006, 3009, 3020];
 
 const LEGENDARY_POOLS = {
-  AP: [3089, 3135, 3157, 3165, 4628, 4629, 4633, 4645, 6653, 6655, 6656],
-  AD: [3031, 3036, 3072, 3085, 3094, 3124, 3153, 3508, 6672, 6675, 6676, 6694],
-  TANK: [3065, 3068, 3075, 3083, 3109, 3110, 3143, 3193, 3742, 4401, 6662, 6664],
-  ASSASSIN: [3142, 3147, 3179, 3814, 6692, 6693, 6695, 6676, 3071, 3033],
+  FIGHTER: [3091, 3004, 6692, 6662, 3742, 3302, 3073, 6609, 3071, 3181, 2517, 3156, 6610, 3161, 3153, 3026, 3139, 3053, 6631, 3074, 6333, 3748, 2501, 3078, 3072],
+  MARKSMAN: [3046, 2512, 3085, 6675, 3094, 3087, 2523, 3091, 3004, 3115, 3124, 6676, 6673, 3033, 6672, 3302, 3508, 3032, 3156, 3095, 3153, 3026, 3139, 3036, 3072, 3031],
+  ASSASSIN: [6695, 6701, 6696, 3179, 6697, 3142, 6698, 3004, 3146, 6699, 3814, 6676, 6609, 6694, 3156, 2520, 3026],
+  MAGE: [3041, 6657, 3116, 3152, 3118, 4628, 6655, 2503, 2522, 4646, 3165, 3003, 3100, 3115, 4010, 3102, 3135, 3146, 3137, 4629, 6653, 2510, 4645, 3157, 3089],
+  TANK: [3050, 3190, 2524, 3109, 3119, 3002, 3075, 3110, 2525, 8020, 3065, 3068, 3143, 2502, 6664, 4401, 6662, 2504, 3742, 3084, 3083, 6665, 3748, 2501],
+  SUPPORT: [2065, 3504, 6620, 6617, 3050, 3190, 2526, 4005, 6616, 3107, 3222, 2524, 3109, 3002, 3075, 3110, 6621, 8020, 3165],
 };
-
-type ChaosArchetype = 'AP' | 'AD' | 'TANK' | 'ASSASSIN' | 'ANY';
 
 type PlayerRole = 'ADC' | 'JUNGLE' | 'TOP' | 'MID' | 'SUPPORT' | 'UNKNOWN';
 
-const CHAOS_STARTERS: Record<ChaosArchetype, number[]> = {
-  AP: [1056, 2003],
-  AD: [1055, 2003],
-  TANK: [1054, 2003],
-  ASSASSIN: [1036, 2003],
-  ANY: [1055, 2003],
-};
+const HEALTH_POTION_ID = 2003;
+const REFILLABLE_POTION_ID = 2031;
+const CONTROL_WARD_ID = 2055;
+const SUPPORT_STARTER_ID = 3865;
+const JUNGLE_PET_IDS = [1101, 1102, 1103];
+const VALID_LANE_STARTER_BASE_IDS = [1054, 1055, 1056, 1036, 1083, 1082];
+const LEGENDARY_EXCLUSION_GROUPS: number[][] = [
+  [3036, 3033, 6694, 3071, 3302],
+  [3135, 4010, 3137, 3302],
+  [3078, 3508, 2510, 3100, 6662],
+  [6631, 6698, 3074, 3748],
+  [3053, 6673, 3156, 3003, 2525],
+  [3814, 3102],
+  [3002, 3742],
+  [3068, 6664],
+];
 
 function pickOne<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomizeSpellMaxOrder(): SpellKey[] {
+  return ['Q', 'W', 'E'].sort(() => Math.random() - 0.5) as SpellKey[];
 }
 
 function pickManyUnique(items: number[], count: number): number[] {
   const unique = Array.from(new Set(items));
   const shuffled = unique.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function conflictsWithExclusionGroups(itemId: number, pickedIds: number[]): boolean {
+  return LEGENDARY_EXCLUSION_GROUPS.some((group) => {
+    if (!group.includes(itemId)) return false;
+    return pickedIds.some((pickedId) => group.includes(pickedId));
+  });
+}
+
+function pickLegendaryItemsWithExclusions(items: number[], count: number): number[] {
+  const unique = Array.from(new Set(items));
+  const shuffled = unique.sort(() => Math.random() - 0.5);
+  const picked: number[] = [];
+
+  for (const itemId of shuffled) {
+    if (picked.length >= count) break;
+    if (conflictsWithExclusionGroups(itemId, picked)) continue;
+    picked.push(itemId);
+  }
+
+  return picked;
+}
+
+function getAllLegendaryItems(): number[] {
+  return Array.from(new Set([
+    ...LEGENDARY_POOLS.FIGHTER,
+    ...LEGENDARY_POOLS.MARKSMAN,
+    ...LEGENDARY_POOLS.ASSASSIN,
+    ...LEGENDARY_POOLS.MAGE,
+    ...LEGENDARY_POOLS.TANK,
+    ...LEGENDARY_POOLS.SUPPORT,
+  ]));
 }
 
 function mapPositionToRole(value: string | undefined): PlayerRole {
@@ -214,78 +257,86 @@ function mapPositionToRole(value: string | undefined): PlayerRole {
 
 // Starting items based on role
 function getStartingItemsForRole(role: PlayerRole): number[] {
-  // Jungle: jungle pet + optional potions
+  // Jungle: exactly one random pet + 0-1 health potions.
   if (role === 'JUNGLE') {
-    const junglePets = [1101, 1102, 1103]; // Green, Red, Blue jungle pets
-    const pet = pickOne(junglePets);
-    const potionOptions = [2003, 2031, 2055, 0]; // Health potion, refillable, control ward, or no potion
-    const potion = pickOne(potionOptions);
-    return potion > 0 ? [pet, potion] : [pet];
+    const start = [pickOne(JUNGLE_PET_IDS)];
+    const potionCount = randomInt(0, 1);
+    for (let i = 0; i < potionCount; i++) {
+      start.push(HEALTH_POTION_ID);
+    }
+    return start;
   }
 
-  // Support: support item + potions/control ward
+  // Support: always World Atlas + either potions (0-2) OR one control ward.
   if (role === 'SUPPORT') {
-    const supportItems = [3850, 3867]; // Various support items
-    const support = pickOne(supportItems);
-    const potionOptions = [2003, 2031, 2055]; // Health potion, refillable, or control ward
-    const second = pickOne(potionOptions);
-    return [support, second];
+    const start = [SUPPORT_STARTER_ID];
+    const useControlWard = Math.random() < 0.5;
+
+    if (useControlWard) {
+      start.push(CONTROL_WARD_ID);
+      return start;
+    }
+
+    const potionCount = randomInt(0, 2);
+    for (let i = 0; i < potionCount; i++) {
+      start.push(HEALTH_POTION_ID);
+    }
+    return start;
   }
 
-  // Other roles: random from predefined starters
-  const otherStarters = [
-    [3006], // Cull
-    [3340], // Dark Seal
-    [1055, 2003], // Doran's Blade + potion
-    [1056, 2003], // Doran's Ring + potion
-    [1054, 2003], // Doran's Shield + potion
-    [3070, 2003], // Tear of the Goddess + potion
-    [3006, 2003, 2003], // Cull + 2 pots (representing "Boots and 4 pots" but starter version)
-    [3006, 2031], // Cull + refillable
-    [3045], // Component (represents Random component to 500g)
-  ];
-  return pickOne(otherStarters);
+  // Lane roles (TOP/MID/ADC/UNKNOWN): strict valid starter base pool only.
+  const baseStarter = pickOne(VALID_LANE_STARTER_BASE_IDS);
+  const start = [baseStarter];
+
+  if (baseStarter === 1036) {
+    const potionCount = randomInt(0, 3);
+    for (let i = 0; i < potionCount; i++) {
+      start.push(HEALTH_POTION_ID);
+    }
+    return start;
+  }
+
+  if (baseStarter === 1082) {
+    const useRefillable = Math.random() < 0.5;
+    if (useRefillable) {
+      start.push(REFILLABLE_POTION_ID);
+      return start;
+    }
+
+    const potionCount = randomInt(0, 3);
+    for (let i = 0; i < potionCount; i++) {
+      start.push(HEALTH_POTION_ID);
+    }
+    return start;
+  }
+
+  const potionCount = baseStarter === 1083 ? randomInt(0, 1) : randomInt(0, 1);
+  for (let i = 0; i < potionCount; i++) {
+    start.push(HEALTH_POTION_ID);
+  }
+
+  return start;
 }
 
-function buildLegendaryPath(role: PlayerRole, isAdcRole: boolean, archetype?: ChaosArchetype): BuildTemplate {
-  // Determine legendary pool based on archetype or role
-  let legendaryPool: number[];
-  if (archetype && archetype !== 'ANY') {
-    legendaryPool = LEGENDARY_POOLS[archetype];
-  } else if (archetype === 'ANY' || !archetype) {
-    legendaryPool = [
-      ...LEGENDARY_POOLS.AP,
-      ...LEGENDARY_POOLS.AD,
-      ...LEGENDARY_POOLS.TANK,
-      ...LEGENDARY_POOLS.ASSASSIN,
-    ];
-  } else {
-    legendaryPool = LEGENDARY_POOLS.AD; // Default fallback
-  }
-
-  // Pick boots first - ensure no boots in legendary pool
+function buildLegendaryPath(role: PlayerRole): BuildTemplate {
+  const legendaryPool = getAllLegendaryItems();
   const boot = pickOne(BOOTS_POOL);
-  const bootFilteredPool = legendaryPool.filter((id) => !BOOTS_POOL.includes(id));
-  
-  // Pick the correct number of legendaries: 5 for non-ADC, 6 for ADC
-  const itemCount = isAdcRole ? 6 : 5;
-  const legendaries = pickManyUnique(bootFilteredPool, itemCount);
+  const legendaries = pickLegendaryItemsWithExclusions(
+    legendaryPool.filter((id) => id !== boot),
+    5,
+  );
 
   // Build starting items based on role
   const startingItems = getStartingItemsForRole(role);
 
   return {
-    name: isAdcRole ? 'ADC Mystery Path' : 'Mystery Path',
-    role: isAdcRole ? 'Marksman' : 'All-Purpose',
-    note: `Boots rush + ${itemCount} legendary items`,
+    name: 'Mystery Path',
+    role: 'All-Purpose',
+    note: 'Boots first + 5 fully random legendary items',
     startingItems,
     coreItems: [boot, ...legendaries],
     situationalItems: [],
   };
-}
-
-function buildAdcLegendaryPath(): BuildTemplate {
-  return buildLegendaryPath('ADC', true);
 }
 
 function randomizeSummonerSpells(role: PlayerRole) {
@@ -351,8 +402,6 @@ export default function Randomizer() {
   const [randomizeRunes, setRandomizeRunes] = useState(true);
   const [randomizeSpells, setRandomizeSpells] = useState(true);
   const [randomizeBuild, setRandomizeBuild] = useState(true);
-  const [includeChaosItems, setIncludeChaosItems] = useState(false);
-  const [chaosArchetype, setChaosArchetype] = useState<ChaosArchetype>('ANY');
   const [flashPosition, setFlashPosition] = useState<'D' | 'F'>('D');
   const [detectedRole, setDetectedRole] = useState<PlayerRole>('UNKNOWN');
   const [autoApplyEnabled, setAutoApplyEnabled] = useState(false);
@@ -361,6 +410,7 @@ export default function Randomizer() {
   const [randomRunePage, setRandomRunePage] = useState<RuneTemplate | null>(null);
   const [perkStyles, setPerkStyles] = useState<PerkStyle[]>([]);
   const [randomSpells, setRandomSpells] = useState<{ first: { id: number; name: string }; second: { id: number; name: string } } | null>(null);
+  const [randomSpellMaxOrder, setRandomSpellMaxOrder] = useState<SpellKey[] | null>(null);
   const [randomBuild, setRandomBuild] = useState<BuildTemplate | null>(null);
   const [exporting, setExporting] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'idle' | 'success' | 'error' | 'loading'; text: string }>({ kind: 'idle', text: '' });
@@ -374,6 +424,7 @@ export default function Randomizer() {
     champion: any | null;
     runePage: RuneTemplate | null;
     spells: { first: { id: number; name: string }; second: { id: number; name: string } } | null;
+    spellMaxOrder: SpellKey[] | null;
     build: BuildTemplate | null;
   } | null>(null);
   const [, setNamesLoadedTick] = useState(0);
@@ -413,10 +464,6 @@ export default function Randomizer() {
   const randomChampionCount = eligibleMasteries.length;
 
   const runeTreeById = useMemo(() => new Map(RUNE_TREES.map(t => [t.id, t.name])), []);
-
-  const buildChaosTemplate = (archetype: ChaosArchetype, role: PlayerRole = 'UNKNOWN', isAdc: boolean = false): BuildTemplate => {
-    return buildLegendaryPath(role, isAdc, archetype);
-  };
 
   const detectRoleFromChampSelect = async (): Promise<PlayerRole> => {
     const candidates = ['/lol-champ-select/v1/session', '/lol-champ-select-legacy/v1/session'];
@@ -524,24 +571,28 @@ export default function Randomizer() {
 
   const rollLoadout = (roleOverride?: PlayerRole, options?: { commit?: boolean }) => {
     const role = roleOverride ?? detectedRole;
-    const isAdc = role === 'ADC';
     const champion = randomizeChampion && eligibleMasteries.length > 0 ? pickOne(eligibleMasteries) : randomChampion;
     const runePage = randomizeRunes ? buildRandomRuneTemplate() : randomRunePage;
     const rolledSpells = randomizeSpells ? randomizeSummonerSpells(role) : randomSpells;
     const spells = placeSpellsByFlashPreference(rolledSpells, flashPosition);
+    const spellMaxOrder = randomizeSpellMaxOrder();
 
-    let build = randomizeBuild ? pickOne(BUILD_TEMPLATES) : randomBuild;
-    if (randomizeBuild && includeChaosItems) {
-      build = buildChaosTemplate(chaosArchetype, role, isAdc);
-    }
-    if (randomizeBuild && isAdc) {
-      build = buildAdcLegendaryPath();
+    let build = randomizeBuild ? buildLegendaryPath(role) : randomBuild;
+
+    if (randomizeBuild && build) {
+      const normalizedStartingItems = getStartingItemsForRole(role);
+
+      build = {
+        ...build,
+        startingItems: normalizedStartingItems,
+      };
     }
 
     if (options?.commit !== false) {
       setRandomChampion(champion ?? null);
       setRandomRunePage(runePage ?? null);
       setRandomSpells(spells ?? null);
+      setRandomSpellMaxOrder(spellMaxOrder ?? null);
       setRandomBuild(build ?? null);
       setFeedback({ kind: 'success', text: 'Randomized new loadout' });
     }
@@ -550,6 +601,7 @@ export default function Randomizer() {
       champion: champion ?? null,
       runePage: runePage ?? null,
       spells: spells ?? null,
+      spellMaxOrder: spellMaxOrder ?? null,
       build: build ?? null,
     };
   };
@@ -834,6 +886,7 @@ export default function Randomizer() {
     champion: any | null;
     runePage: RuneTemplate | null;
     spells: { first: { id: number; name: string }; second: { id: number; name: string } } | null;
+    spellMaxOrder: SpellKey[] | null;
     build: BuildTemplate | null;
   }) => {
     if (exporting) return;
@@ -844,6 +897,7 @@ export default function Randomizer() {
       const champion = rolled?.champion ?? randomChampion;
       const runePage = rolled?.runePage ?? randomRunePage;
       const spells = rolled?.spells ?? randomSpells;
+      const spellMaxOrder = rolled?.spellMaxOrder ?? randomSpellMaxOrder;
       const build = rolled?.build ?? randomBuild;
 
       const phaseResponse = await lcuRequest({ method: 'GET', endpoint: '/lol-gameflow/v1/gameflow-phase' });
@@ -918,6 +972,7 @@ export default function Randomizer() {
           setRandomChampion(pending.champion ?? null);
           setRandomRunePage(pending.runePage ?? null);
           setRandomSpells(pending.spells ?? null);
+          setRandomSpellMaxOrder(pending.spellMaxOrder ?? null);
           setRandomBuild(pending.build ?? null);
 
           const runeOk = await exportRunes(pending.runePage, pending.champion);
@@ -1103,8 +1158,6 @@ export default function Randomizer() {
     randomizeRunes,
     randomizeSpells,
     randomizeBuild,
-    includeChaosItems,
-    chaosArchetype,
     flashPosition,
     eligibleMasteries,
     randomChampion,
@@ -1114,6 +1167,7 @@ export default function Randomizer() {
   ]);
 
   const selectedChampionName = randomChampion ? getChampionName(randomChampion.championId) : 'No champion rolled';
+  const selectedSpellMaxOrderChampionName = randomChampion ? getChampionSpellAssetName(randomChampion.championId) : null;
 
   return (
     <div className="p-4 md:p-5 space-y-4 animate-slide-up">
@@ -1165,8 +1219,8 @@ export default function Randomizer() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="card p-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <section className="card p-4 space-y-3 h-full min-h-[420px]">
           <h3 className="text-sm font-bold text-ink-bright">Randomizer Modules</h3>
 
           <label className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 cursor-pointer">
@@ -1208,80 +1262,82 @@ export default function Randomizer() {
           </label>
         </section>
 
-        <section className="card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-ink-bright">Build Path Chaos Mode</h3>
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-ink-muted">
-            <input type="checkbox" checked={includeChaosItems} onChange={(e) => setIncludeChaosItems(e.target.checked)} className="w-3.5 h-3.5 rounded border border-white/[0.1] bg-white/[0.05] checked:bg-blue-500 checked:border-blue-500 cursor-pointer" />
-            Include fully random legendary builds (boots first)
-          </label>
-
-          <div className="grid grid-cols-5 gap-1.5">
-            {(['ANY', 'AP', 'AD', 'TANK', 'ASSASSIN'] as ChaosArchetype[]).map((type) => (
-              <button
-                key={type}
-                onClick={() => setChaosArchetype(type)}
-                className={`px-2 py-2 rounded-lg text-[10px] font-semibold border ${chaosArchetype === type ? 'bg-blue-500/15 text-blue-200 border-blue-500/30' : 'bg-white/[0.03] text-ink-ghost border-white/[0.07] hover:bg-white/[0.06]'}`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-[11px] text-ink-ghost">When chaos mode is enabled, roll always generates a full random legendary path after boots.</p>
-        </section>
-      </div>
-
-      <section className="card p-4 space-y-3">
-        <h3 className="text-sm font-bold text-ink-bright">Current Roll</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
-            <div className="text-[10px] text-ink-ghost mb-1">Champion</div>
-            {randomChampion ? (
-              <div className="flex items-center gap-2">
-                <img src={getChampionIconUrl(randomChampion.championId)} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.08]" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.35'; }} />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink-bright truncate">{selectedChampionName}</p>
-                  <p className="text-[10px] text-ink-ghost">Mastery {randomChampion.championLevel ?? 0}</p>
+        <section className="card p-4 space-y-3 h-full min-h-[420px]">
+          <h3 className="text-sm font-bold text-ink-bright">Current Roll</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
+              <div className="text-[10px] text-ink-ghost mb-1">Champion</div>
+              {randomChampion ? (
+                <div className="flex items-center gap-2">
+                  <img src={getChampionIconUrl(randomChampion.championId)} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.08]" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.35'; }} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink-bright truncate">{selectedChampionName}</p>
+                    <p className="text-[10px] text-ink-ghost">Mastery {randomChampion.championLevel ?? 0}</p>
+                  </div>
                 </div>
-              </div>
-            ) : <p className="text-sm text-ink-dim">Not rolled</p>}
-          </div>
+              ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+            </div>
 
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
-            <div className="text-[10px] text-ink-ghost mb-1">Full Rune Page</div>
-            {randomRunePage ? (
-              <>
-                <p className="text-sm font-semibold text-ink-bright truncate">{randomRunePage.name}</p>
-                <p className="text-[10px] text-ink-ghost">{runeTreeById.get(randomRunePage.primaryStyleId) ?? 'Unknown'} / {runeTreeById.get(randomRunePage.subStyleId) ?? 'Unknown'}</p>
-              </>
-            ) : <p className="text-sm text-ink-dim">Not rolled</p>}
-          </div>
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
+              <div className="text-[10px] text-ink-ghost mb-1">Full Rune Page</div>
+              {randomRunePage ? (
+                <>
+                  <p className="text-sm font-semibold text-ink-bright truncate">{randomRunePage.name}</p>
+                  <p className="text-[10px] text-ink-ghost">{runeTreeById.get(randomRunePage.primaryStyleId) ?? 'Unknown'} / {runeTreeById.get(randomRunePage.subStyleId) ?? 'Unknown'}</p>
+                </>
+              ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+            </div>
 
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
-            <div className="text-[10px] text-ink-ghost mb-1">Summoner Spells</div>
-            {randomSpells ? (
-              <>
-                <p className="text-sm font-semibold text-ink-bright truncate">{randomSpells.first.name} / {randomSpells.second.name}</p>
-                <p className="text-[10px] text-ink-ghost">Flash pref {flashPosition} · key spell opposite</p>
-              </>
-            ) : <p className="text-sm text-ink-dim">Not rolled</p>}
-          </div>
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
+              <div className="text-[10px] text-ink-ghost mb-1">Summoner Spells</div>
+              {randomSpells ? (
+                <>
+                  <p className="text-sm font-semibold text-ink-bright truncate">{randomSpells.first.name} / {randomSpells.second.name}</p>
+                  <p className="text-[10px] text-ink-ghost">Flash pref {flashPosition} · key spell opposite</p>
+                </>
+              ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+            </div>
 
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
-            <div className="text-[10px] text-ink-ghost mb-1">Build Path</div>
-            {randomBuild ? (
-              <>
-                <p className="text-sm font-semibold text-ink-bright truncate">{randomBuild.name}</p>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {randomBuild.coreItems.map((id, idx) => (
-                    <img key={`${id}-${idx}`} src={getItemIconUrl(id)} alt="" className="w-7 h-7 rounded-md border border-white/[0.08]" />
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px] md:col-span-2">
+              <div className="text-[10px] text-ink-ghost mb-2">Spell Max order</div>
+              {randomChampion && randomSpellMaxOrder && selectedSpellMaxOrderChampionName ? (
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                  {randomSpellMaxOrder.map((spell, index) => (
+                    <div key={`${spell}-${index}`} className="flex items-center gap-2">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg border border-white/[0.1] bg-black/20 overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+                          <img
+                            src={getChampionSpellMaxOrderIconUrl(selectedSpellMaxOrderChampionName, spell)}
+                            alt={`${selectedChampionName} ${spell}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.35'; }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold text-white tracking-wide">{spell}</span>
+                      </div>
+                      {index < randomSpellMaxOrder.length - 1 && <ArrowRight size={12} className="text-ink-ghost/70 shrink-0" />}
+                    </div>
                   ))}
                 </div>
-              </>
-            ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+              ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+            </div>
+
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 min-h-[86px]">
+              <div className="text-[10px] text-ink-ghost mb-1">Build Path</div>
+              {randomBuild ? (
+                <>
+                  <p className="text-sm font-semibold text-ink-bright truncate">{randomBuild.name}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {randomBuild.coreItems.map((id, idx) => (
+                      <img key={`${id}-${idx}`} src={getItemIconUrl(id)} alt="" className="w-7 h-7 rounded-md border border-white/[0.08]" />
+                    ))}
+                  </div>
+                </>
+              ) : <p className="text-sm text-ink-dim">Not rolled</p>}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

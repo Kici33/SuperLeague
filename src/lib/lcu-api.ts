@@ -237,7 +237,18 @@ export function getProfileIconUrl(iconId: number): string {
 }
 
 export function getItemIconUrl(itemId: number): string {
-  return `https://ddragon.leagueoflegends.com/cdn/14.4.1/img/item/${itemId}.png`;
+  return `https://ddragon.leagueoflegends.com/cdn/16.8.1/img/item/${itemId}.png`;
+}
+
+function normalizeChampionSpellAssetName(championName: string): string {
+  return championName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '');
+}
+
+export function getChampionSpellMaxOrderIconUrl(championName: string, spell: 'Q' | 'W' | 'E'): string {
+  return `https://ddragon.leagueoflegends.com/cdn/16.8.1/img/spell/${normalizeChampionSpellAssetName(championName)}${spell}.png`;
 }
 
 export function getSkinSplashUrl(championId: number, skinId: number): string {
