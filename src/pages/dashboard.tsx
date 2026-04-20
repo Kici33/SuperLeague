@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getChampionMasteries, getChallenges, getChampionIconUrl, getRecentMatches } from '@/lib/lcu-api';
 
 // Champion name lookup from Community Dragon
@@ -267,14 +267,9 @@ function MasteryClassPanel({ classData }: { classData: { name: string; m7: numbe
                         />
                         <span className="text-sm text-ink font-medium text-center leading-tight">{cls.name}</span>
 
-                        {/* Hover tooltip - fixed positioning */}
+                        {/* Hover tooltip */}
                         {isHovered && (
-                            <div className="fixed z-[100] p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[120px] pointer-events-none"
-                                style={{
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)'
-                                }}>
+                            <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 z-[100] p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[120px] pointer-events-none">
                                 <div className="text-xs font-semibold text-ink-bright mb-1.5">{cls.name}</div>
                                 <div className="space-y-0.5">
                                     {thresholds.map(t => {
@@ -318,7 +313,7 @@ function ChallengeRow({ c }: { c: any }) {
             <ChallengeTokenIcon challengeId={challengeId} tier={tier} size={20} />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-medium text-ink-bright truncate pr-2">{c.name ?? `#${c.id}`}</span>
+                    <span className="text-sm font-medium text-ink-bright truncate pr-2">{c.name ?? `#${c.id}`}</span>
                     <span className="text-sm text-ink tabular-nums flex-shrink-0 font-medium">
                         {isMasterPlus ? '✓' : `${cur.toLocaleString()} / ${next.toLocaleString()}`}
                     </span>
@@ -328,7 +323,7 @@ function ChallengeRow({ c }: { c: any }) {
                 </div>
             </div>
             {tip && (c.description ?? c.shortDescription) && (
-                <div className="absolute left-0 bottom-full mb-1 z-50 w-60 p-2 rounded-lg bg-raised border border-white/[0.1] shadow-xl text-xs text-ink-dim leading-relaxed">
+                <div className="absolute left-0 bottom-full mb-1 z-50 w-60 p-2 rounded-lg bg-raised border border-white/[0.1] shadow-xl text-sm text-ink-dim leading-relaxed">
                     {c.description ?? c.shortDescription}
                 </div>
             )}
@@ -431,10 +426,43 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterChampionId, setFilterChampionId] = useState<number | null>(null);
     const [showSearch, setShowSearch] = useState(false);
+    const graphContainerRef = useRef<HTMLDivElement | null>(null);
+    const [graphWidth, setGraphWidth] = useState(500);
 
-    const GRAPH_W = 500;
-    const GRAPH_H = 140;
-    const PADDING = { top: 10, right: 10, bottom: 20, left: 50 };
+    useEffect(() => {
+        const element = graphContainerRef.current;
+        if (!element) return;
+
+        const setMeasuredWidth = (width: number) => {
+            const next = Math.max(420, width || 500);
+            setGraphWidth(prev => (prev === next ? prev : next));
+        };
+
+        const measureNow = () => {
+            const width = Math.round(element.getBoundingClientRect().width);
+            setMeasuredWidth(width);
+        };
+
+        measureNow();
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver((entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+                setMeasuredWidth(Math.round(entry.contentRect.width));
+            });
+            observer.observe(element);
+            return () => observer.disconnect();
+        }
+
+        window.addEventListener('resize', measureNow);
+        return () => window.removeEventListener('resize', measureNow);
+    }, []);
+
+    const GRAPH_W = graphWidth;
+    const GRAPH_H = Math.max(170, Math.min(230, Math.round(graphWidth * 0.32)));
+    const leftPadding = Math.max(60, Math.min(90, Math.round(graphWidth * 0.1)));
+    const PADDING = { top: 14, right: 14, bottom: 28, left: leftPadding };
     const innerW = GRAPH_W - PADDING.left - PADDING.right;
     const innerH = GRAPH_H - PADDING.top - PADDING.bottom;
 
@@ -615,6 +643,11 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
     const displayTotal = filterChampionId && filteredChampionMastery
         ? filteredChampionMastery.championPoints
         : totalAccountMastery;
+    const TOOLTIP_W = 220;
+    const tooltipLeft = hovered
+        ? Math.min(Math.max(hovered.x + 12, 8), Math.max(8, GRAPH_W - TOOLTIP_W - 8))
+        : 8;
+    const tooltipTop = hovered ? Math.max(8, hovered.y - 110) : 8;
 
     return (
         <div className="space-y-3">
@@ -629,7 +662,7 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
                         onChange={e => { setSearchQuery(e.target.value); setShowSearch(true); }}
                         onFocus={() => setShowSearch(true)}
                         onBlur={() => setTimeout(() => setShowSearch(false), 150)}
-                        className="w-full px-2 py-1 text-xs rounded bg-dark border border-white/[0.06] text-ink-bright placeholder:text-ink-ghost focus:outline-none focus:border-gold/30"
+                        className="w-full px-2 py-1 text-sm rounded bg-dark border border-white/[0.06] text-ink-bright placeholder:text-ink-ghost focus:outline-none focus:border-gold/30"
                     />
                     {showSearch && searchResults.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg bg-raised border border-white/[0.1] shadow-xl overflow-hidden">
@@ -650,12 +683,12 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
                 <div className="flex-1" />
                 <div className="text-right">
                     <div className="text-lg font-bold text-gold tabular-nums">{formatNumber(displayTotal)}</div>
-                    <div className="text-xs text-ink">{filterChampionId ? 'champion' : 'account'} total</div>
+                    <div className="text-sm text-ink">{filterChampionId ? 'champion' : 'account'} total</div>
                 </div>
             </div>
 
             {/* Stats row */}
-            <div className="flex items-center gap-4 text-xs py-1.5 px-2 rounded bg-white/[0.02]">
+            <div className="flex items-center gap-4 text-sm py-1.5 px-2 rounded bg-white/[0.02]">
                 <div className="flex items-center gap-1.5">
                     <span className="text-ink-ghost">Avg/game:</span>
                     <span className="text-gold tabular-nums font-medium">
@@ -705,7 +738,7 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
             )}
 
             {/* Legend */}
-            <div className="flex items-center gap-3 text-xs text-ink-ghost">
+            <div className="flex items-center gap-3 text-sm text-ink-ghost">
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full" style={{ background: TIER_C.PLATINUM }} /> Win</div>
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full" style={{ background: TIER_C.BRONZE }} /> Loss</div>
                 <div className="flex-1" />
@@ -713,8 +746,14 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
             </div>
 
             {/* Graph */}
-            <div className="relative">
-                <svg width="100%" viewBox={`0 0 ${GRAPH_W} ${GRAPH_H}`} className="overflow-visible">
+            <div ref={graphContainerRef} className="relative w-full">
+                <svg
+                    width={GRAPH_W}
+                    height={GRAPH_H}
+                    viewBox={`0 0 ${GRAPH_W} ${GRAPH_H}`}
+                    preserveAspectRatio="xMinYMin meet"
+                    className="w-full h-auto overflow-visible"
+                >
                     {/* Grid lines */}
                     {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
                         const y = PADDING.top + (1 - pct) * innerH;
@@ -723,8 +762,15 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
                             <g key={i}>
                                 <line x1={PADDING.left} y1={y} x2={PADDING.left + innerW} y2={y}
                                     stroke="#ffffff08" strokeDasharray="2,4" />
-                                <text x={PADDING.left - 4} y={y + 3} textAnchor="end"
-                                    className="fill-ink-ghost text-xs">{formatNumber(val)}</text>
+                                <text
+                                    x={PADDING.left - 6}
+                                    y={y}
+                                    textAnchor="end"
+                                    dominantBaseline="middle"
+                                    className="fill-ink-muted text-sm font-semibold"
+                                >
+                                    {formatNumber(val)}
+                                </text>
                             </g>
                         );
                     })}
@@ -756,8 +802,10 @@ function MasteryGraph({ matches, loading, masteries }: { matches: MatchPoint[]; 
 
                 {/* Hover tooltip */}
                 {hovered && (
-                    <div className="absolute z-50 p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[180px] pointer-events-none"
-                        style={{ left: Math.min(hovered.x, GRAPH_W - 200), top: Math.max(0, hovered.y - 110) }}>
+                    <div
+                        className="absolute z-50 p-2.5 rounded-lg bg-raised border border-white/[0.1] shadow-xl min-w-[180px] max-w-[220px] pointer-events-none"
+                        style={{ left: tooltipLeft, top: tooltipTop }}
+                    >
                         <div className="flex items-center gap-2 mb-2">
                             <img src={getChampionIconUrl(hovered.data.championId)} alt=""
                                 className="w-8 h-8 rounded border border-white/[0.1]" />
@@ -1058,7 +1106,7 @@ export default function Dashboard() {
         , [challenges]);
 
     return (
-        <div className="p-6 space-y-4 animate-slide-up">
+        <div className="min-h-full p-6 space-y-4 animate-slide-up">
             <div className="grid grid-cols-[1fr_280px] gap-4">
                 {/* ── Left ── */}
                 <div className="space-y-4">
@@ -1173,16 +1221,16 @@ function ChallengeRowCompact({ c }: { c: any }) {
             <ChallengeTokenIcon challengeId={challengeId} tier={tier} size={16} />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-medium text-ink-bright truncate pr-1">{c.name ?? `#${c.id}`}</span>
+                    <span className="text-sm font-medium text-ink-bright truncate pr-1">{c.name ?? `#${c.id}`}</span>
                     {isMasteryChallenge && !isMasterPlus ? (
                         <div className="flex items-center gap-1 flex-shrink-0">
                             <div className="flex items-center gap-0.5">
                                 {Array.from({ length: Math.min(cur, 10) }).map((_, i) => (
                                     <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                                 ))}
-                                {cur > 10 && <span className="text-xs text-ink ml-0.5">+{cur - 10}</span>}
+                                {cur > 10 && <span className="text-sm text-ink ml-0.5">+{cur - 10}</span>}
                             </div>
-                            <span className="text-xs text-ink-ghost">/{next}</span>
+                            <span className="text-sm text-ink-ghost">/{next}</span>
                         </div>
                     ) : (
                         <span className="text-sm text-ink tabular-nums flex-shrink-0 font-medium">

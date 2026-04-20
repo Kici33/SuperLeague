@@ -38,6 +38,25 @@
    Layout
 ────────────────────────────────────────────────────── */
 @layer components {
+  .app-scale-frame {
+    @apply w-screen h-screen overflow-hidden bg-abyss;
+  }
+
+  .app-scale-content {
+    width: calc(100% / var(--app-scale, 1));
+    height: calc(100% / var(--app-scale, 1));
+    transform-origin: top left;
+    transform: scale(var(--app-scale, 1));
+    transition: width 120ms ease-out, height 120ms ease-out, transform 120ms ease-out;
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-scale-content {
+      transition: none;
+    }
+  }
+
   /* ─── Cards ─── */
   .card {
     @apply bg-surface rounded-lg border border-white/[0.05]

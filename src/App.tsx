@@ -47,6 +47,19 @@ const TIER_ALIASES: Record<string, keyof typeof TIER_C> = {
   C: 'CHALLENGER',
 };
 
+const SCALE_BASELINE = { width: 1440, height: 900 };
+const MIN_APP_SCALE = 1;
+const MAX_APP_SCALE = 1.35;
+
+function getAppScale() {
+  const widthScale = window.innerWidth / SCALE_BASELINE.width;
+  const heightScale = window.innerHeight / SCALE_BASELINE.height;
+  const nextScale = Math.min(widthScale, heightScale);
+
+  if (!Number.isFinite(nextScale)) return 1;
+  return Math.min(MAX_APP_SCALE, Math.max(MIN_APP_SCALE, nextScale));
+}
+
 function normalizeTier(tier: unknown): keyof typeof TIER_C {
   const raw = String(tier ?? 'IRON').trim().toUpperCase();
   return TIER_ALIASES[raw] ?? (raw as keyof typeof TIER_C);
@@ -77,12 +90,32 @@ function tierLabel(tier: string, div: string, lp: number) {
 }
 
 export default function App() {
+  const [appScale, setAppScale] = useState(() => getAppScale());
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const { connected, summoner, loading, refresh } = useLcu();
   const updater = useUpdater();
   const [copied, setCopied] = useState(false);
   const [soloRank, setSoloRank] = useState<any>(null);
   const [flexRank, setFlexRank] = useState<any>(null);
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const updateScale = () => {
+      cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        setAppScale(getAppScale());
+      });
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', updateScale);
+    };
+  }, []);
 
   // Fetch ranked for sidebar
   useEffect(() => {
@@ -111,9 +144,12 @@ export default function App() {
   };
 
   const ActivePage = pages[activePage]?.component;
+  const appScaleStyle = { '--app-scale': appScale } as React.CSSProperties;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-abyss">
+    <div className="app-scale-frame">
+      <div className="app-scale-content" style={appScaleStyle}>
+        <div className="flex h-full w-full overflow-hidden bg-abyss">
       {/* ── Sidebar ── */}
       <aside className="w-56 flex-shrink-0 flex flex-col h-full border-r border-white/[0.05] bg-dark/60">
         {/* Logo */}
@@ -280,6 +316,8 @@ export default function App() {
           </div>
         </div>
       </main>
+        </div>
+      </div>
     </div>
   );
 }
